@@ -7,11 +7,11 @@ Overlap certificates and failure diagnostics for bridge sampling in R, built on
 The optimal bridge sampling estimator of Meng and Wong (1996) is the intercept of a logistic
 regression that separates posterior draws from proposal draws. Its estimating function is a
 sum of bounded terms, so the accuracy of the estimate and of its Monte Carlo standard error
-(MCSE) is governed by the **overlap** of the two samples, not by moments of the importance
-ratios. From the output that `bridgesampling::bridge_sampler()` already produces, and at no
-extra cost, `bridgeoverlap` reports the estimate, its MCSE, an effective-overlap certificate,
-a finite-sample confidence interval, a calibration test for sampler failure and
-delete-a-group jackknife diagnostics, and maps every flag to an action.
+(MCSE) is governed by the **overlap** of the two samples. From the output that 
+`bridgesampling::bridge_sampler()` already produces, and at no extra cost, `bridgeoverlap` 
+reports the estimate, its MCSE, an effective-overlap certificate, a finite-sample confidence 
+interval, a calibration test for sampler failure and delete-a-group jackknife diagnostics, 
+and maps every flag to an action.
 
 
 
@@ -26,13 +26,9 @@ install.packages("cmdstanr", repos = c("https://stan-dev.r-universe.dev", getOpt
 cmdstanr::install_cmdstan()
 ```
 
-Works with `bridgesampling` 1.1-2 (CRAN) and 1.2-1 (GitHub; adds a `CmdStanMCMC`
-method and `mcse_logml`).
+Works with `bridgesampling` 1.1-2 (CRAN) and 1.2-1 (GitHub).
 
 ## Quick start with cmdstanr
-
-The package ships Stan programs whose evidence is known exactly. The eight
-schools model has log Z = -31.3113.
 
 ```r
 library(bridgeoverlap)
@@ -97,7 +93,7 @@ bridge_diagnostics(a_post, a_prop, chains = 4)
 
 | Output | Meaning | Rule |
 |---|---|---|
-| `logml`, `mcse` | Estimate and delta-method MCSE. For MCMC the posterior term uses the long-run variance, estimated within chains. | |
+| `logml`, `mcse` | Estimate and delta-method MCSE. For MCMC the posterior term uses the long-run variance, estimated within chains. |  |
 | `n_ov`, `I`, `NH0` | Effective-overlap certificate, overlap ratio Î and the number of ambiguous draws. | Flag n̂_ov < 10 (independent draws; plain rule, the default). Near perfection (Î → 1) every run is flagged and the finite-sample interval is the answer. |
 | `n_ovP`, `tau` | MCMC certificate n̂_ov² / n̂_P and the autocorrelation time of the responsibilities. | Flag n̂_ov^P < 30 (MCMC). |
 | `eb` | Finite-sample interval from Bennett's inequality, valid at every sample size. | Independent draws only. |
@@ -126,13 +122,8 @@ them with probability at most α. Use `as.data.frame()` for one row per run.
   is `use_neff = FALSE`. This is the default in `bridge_sampler_cmdstanr()`, and
   then `bridge_diagnostics()` reproduces `bridgesampling`'s `logml` to about
   1e-15.
-- **Splits.** The `stanfit`, `stanreg` and `mcmc.list` methods fit the
-  proposal on the first half of every chain. The `matrix` method, and the
-  `CmdStanMCMC` method of bridgesampling 1.2-1, use the first half of the
-  stacked draws instead. `bridge_chain_ids()` returns the right chain ids
-  for either.
 - **Near-perfect proposals.** When Î > 1/2 a small n̂_ov is harmless, so the threshold shrinks linearly with 1 − Î and amounts to requiring about
-  twice the threshold in ambiguous draws. The gated rule of 0.1.0 is `rule = "gate"`.
+  twice the threshold in ambiguous draws. 
 - **Cross-fitting.** `bridge_crossfit()` / `bridge_sampler_cmdstanr(fit, crossfit = TRUE)`
   record the folds; `bridge_diagnostics()` then computes variances, jackknife blocks and
   finite-sample bounds within folds. With an even number of chains the
@@ -179,13 +170,3 @@ testthat::test_local()                                # fast, no Stan needed
 Sys.setenv(BRIDGEOVERLAP_TEST_CMDSTAN = "true")       # also compile and run Stan
 testthat::test_local()
 ```
-
-## Citation
-
-```r
-citation("bridgeoverlap")
-```
-
-## License
-
-MIT
