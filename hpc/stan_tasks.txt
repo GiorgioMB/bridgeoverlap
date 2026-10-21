@@ -1,0 +1,33 @@
+# One line per array task: script, BO_STAN_CONFIGS (empty for scripts 10-12), BO_REP_RANGE.
+# Replication counts are fixed in analysis/config.R; the ranges below only split them.
+10_stan_eight_schools.R		1-100
+10_stan_eight_schools.R		101-200
+11_stan_regression_dimension.R		1-100
+12_stan_mixture.R		1-100
+30_stan_benchmark.R	radon_mn_pooled	1-200
+30_stan_benchmark.R	radon_mn_vi_c	1-100
+30_stan_benchmark.R	radon_mn_vi_c	101-200
+30_stan_benchmark.R	radon_mn_vi_nc	1-100
+30_stan_benchmark.R	radon_mn_vi_nc	101-200
+30_stan_benchmark.R	radon_mn_hi_c	1-100
+30_stan_benchmark.R	radon_mn_hi_c	101-200
+30_stan_benchmark.R	radon_mn_vis_c	1-50
+30_stan_benchmark.R	radon_mn_vis_c	51-100
+30_stan_benchmark.R	radon_mn_vis_c	101-150
+30_stan_benchmark.R	radon_mn_vis_c	151-200
+30_stan_benchmark.R	radon_mn_vis_nc	1-50
+30_stan_benchmark.R	radon_mn_vis_nc	51-100
+30_stan_benchmark.R	radon_mn_vis_nc	101-150
+30_stan_benchmark.R	radon_mn_vis_nc	151-200
+30_stan_benchmark.R	radon_all_vi_c	1-25
+30_stan_benchmark.R	radon_all_vi_c	26-50
+30_stan_benchmark.R	radon_all_vi_c	51-75
+30_stan_benchmark.R	radon_all_vi_c	76-100
+30_stan_benchmark.R	radon_mn_vi_c_x4	1-100
+30_stan_benchmark.R	radon_mn_hi_c_x4	1-100
+30_stan_benchmark.R	radon_mn_vis_c_x4	1-50
+30_stan_benchmark.R	radon_mn_vis_c_x4	51-100
+30_stan_benchmark.R	radon_mn_vis_nc_x4	1-50
+30_stan_benchmark.R	radon_mn_vis_nc_x4	51-100
+30_stan_benchmark.R	mixture	1-100
+30_stan_benchmark.R	mixture	101-200

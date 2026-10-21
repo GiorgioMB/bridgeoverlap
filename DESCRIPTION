@@ -1,0 +1,44 @@
+Package: bridgeoverlap
+Type: Package
+Title: Overlap Certificates and Failure Diagnostics for Bridge Sampling
+Version: 0.2.0
+Authors@R: c(
+    person("Giorgio", "Micaletto", email = "gmicaletto@uchicago.edu",
+           role = c("aut", "cre")))
+Description: Diagnostics for the optimal bridge sampling estimator of
+    Meng and Wong (1996). The estimator is computed as the root of the score of
+    an intercept-only logistic regression that separates posterior from proposal
+    draws. From the fitted responsibilities the package computes, at no extra
+    cost, the delta-method Monte Carlo standard error (MCSE) with a within-chain
+    long-run variance, the effective overlap certificate, a finite-sample
+    confidence interval for independent draws based on Bennett's inequality, a
+    calibration test for sampler failure and delete-a-group jackknife
+    diagnostics for Markov chain output. Works directly on objects returned by
+    'bridgesampling::bridge_sampler()' and provides helpers for 'cmdstanr' fits,
+    including two-fold cross-fitting.
+License: MIT + file LICENSE
+Encoding: UTF-8
+Depends:
+    R (>= 4.1.0)
+Imports:
+    bridgesampling (>= 1.1-2),
+    coda,
+    posterior (>= 1.4.0),
+    stats,
+    utils
+Suggests:
+    cmdstanr (>= 0.8.0),
+    jsonlite,
+    Rcpp,
+    ggplot2,
+    MASS,
+    mvtnorm,
+    patchwork,
+    Rmpfr,
+    testthat (>= 3.0.0)
+Additional_repositories: https://stan-dev.r-universe.dev
+URL: https://github.com/GiorgioMB/bridgeoverlap
+BugReports: https://github.com/GiorgioMB/bridgeoverlap/issues
+Config/testthat/edition: 3
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.1

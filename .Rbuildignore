@@ -1,0 +1,11 @@
+^.*\.Rproj$
+^\.Rproj\.user$
+^analysis$
+^\.github$
+^LICENSE\.md$
+^README\.md$
+^results$
+^figures$
+^hpc$
+^reproducibility$
+^NEWS\.md$

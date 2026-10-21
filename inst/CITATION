@@ -1,0 +1,11 @@
+bibentry(
+  bibtype = "Manual",
+  title = "{bridgeoverlap}: Overlap Certificates and Failure Diagnostics for Bridge Sampling",
+  author = person("Giorgio", "Micaletto"),
+  year = "2026",
+  note = "R package version 0.2.0",
+  url = "https://github.com/GiorgioMB/bridgeoverlap",
+  textVersion = paste("Micaletto, G. (2026). bridgeoverlap: Overlap certificates and failure",
+                      "diagnostics for bridge sampling. R package version 0.2.0.",
+                      "https://github.com/GiorgioMB/bridgeoverlap")
+)

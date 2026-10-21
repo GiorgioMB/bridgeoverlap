@@ -1,0 +1,21 @@
+.Rproj.user
+.Rhistory
+.RData
+.Ruserdata
+*.Rproj
+.DS_Store
+# compiled Stan executables and CmdStan output
+analysis/stan/*
+!analysis/stan/*.stan
+inst/stan/*
+!inst/stan/*.stan
+inst/stan/*_ml
+*.o
+*.so
+*.hpp
+# outputs, re-created by the analysis scripts
+analysis/results/
+analysis/figures/
+analysis/cache/
+generated/
+hpc/logs/

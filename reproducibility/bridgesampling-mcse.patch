@@ -1,0 +1,35 @@
+diff -ru a/R/bridge_sampler_internals.R b/R/bridge_sampler_internals.R
+--- a/R/bridge_sampler_internals.R	2026-10-19 15:10:41.591102301 +0000
++++ b/R/bridge_sampler_internals.R	2026-10-19 15:10:41.857508183 +0000
+@@ -340,10 +340,11 @@
+       "logml" = abs((logml - logmlold) / logml)
+     )
+     i <- i + 1
++    # numi is computed from the n.2 proposal draws and deni from the n.1
++    # posterior draws: each relative variance is divided by its own sample size.
+     var_r <- (mean_numi^2) /
+       (mean_deni^2) *
+-      (var_numi / (mean_numi)^2 + var_deni / mean_deni^2)
+-    var_r <- var_r / length(numi)
++      (var_numi / (mean_numi)^2 / length(numi) + var_deni / mean_deni^2 / length(deni))
+ 
+     ## Compute variance in log scale by match the variance of a
+     ## log-normal approximation
+diff -ru a/R/error_measures.R b/R/error_measures.R
+--- a/R/error_measures.R	2026-10-19 15:10:41.591296679 +0000
++++ b/R/error_measures.R	2026-10-19 15:10:41.857064558 +0000
+@@ -62,10 +62,13 @@
+ 
+   f1 <- as.numeric(p_g / (s1 * p_g + s2 * g_g))
+   f2 <- as.numeric(g_p / (s1 * p_p + s2 * g_p))
++  # spectrum0.ar() returns the spectral density at frequency zero, i.e. the
++  # long-run variance tau * var(f2) of the posterior terms: it must not be
++  # multiplied by var(f2) again.
+   rho_f2 <- spectrum0.ar(f2)$spec
+ 
+   term1 <- 1 / N2 * var(f1) / mean(f1)^2
+-  term2 <- rho_f2 / N1 * var(f2) / mean(f2)^2
++  term2 <- rho_f2 / N1 / mean(f2)^2
+ 
+   re2 <- term1 + term2
+ 
