@@ -1,0 +1,19 @@
+bibentry(
+  bibtype = "Misc",
+  title = "Overlap, Not Moments: Sample Size and Standard Errors for the Optimal Bridge Sampling Estimator",
+  author = person("Giorgio", "Micaletto"),
+  year = "2026",
+  note = "Manuscript",
+  textVersion = paste("Micaletto, G. (2026). Overlap, not moments: sample size and standard errors",
+                      "for the optimal bridge sampling estimator. Manuscript.")
+)
+bibentry(
+  bibtype = "Manual",
+  title = "{bridgeoverlap}: Overlap Checks and Failure Diagnostics for Bridge Sampling",
+  author = person("Giorgio", "Micaletto"),
+  year = "2026",
+  note = "R package version 1.0.0",
+  url = "https://github.com/GiorgioMB/bridgeoverlap",
+  textVersion = paste("Micaletto, G. (2026). bridgeoverlap: Overlap checks and failure diagnostics",
+                      "for bridge sampling. R package version 1.0.0. https://github.com/GiorgioMB/bridgeoverlap")
+)
