@@ -17,8 +17,8 @@ tab <- do.call(rbind, lapply(quick_pick(cfgs, c(1L, 4L)), function(cc) {
     msg("EB:", cc$fam$label, "S =", S)
     res <- run_reps(R, function(r) {
       ap <- logZ + cc$fam$lr(cc$fam$rpost(S)); aq <- logZ + cc$fam$lr(cc$fam$rprop(S))
-      d <- bridge_diagnostics(ap, aq, iid = TRUE, eb = TRUE, jackknife = FALSE)
-      lo <- d$eb[["lower"]]; hi <- d$eb[["upper"]]                         # the interval of Proposition 2
+      d <- bridge_diagnostics(ap, aq, iid = TRUE, interval = TRUE, jackknife = FALSE)
+      lo <- d$interval[["lower"]]; hi <- d$interval[["upper"]]                         # the interval of Proposition 2
       data.frame(n_ov = d$n_ov, I = d$I,
                  cov_delta = is.finite(d$logml) && isTRUE(abs(d$logml - logZ) <= z975 * d$mcse),
                  cov_eb = lo <= logZ && logZ <= hi, bounded = is.finite(lo) && is.finite(hi),

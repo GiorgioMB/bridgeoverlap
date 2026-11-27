@@ -12,7 +12,7 @@ make_gauss_bridge <- function(seed = 40, use_neff = FALSE, chains = 1) {
 
 test_that("the estimate equals bridgesampling's logml when use_neff = FALSE", {
   g <- make_gauss_bridge()
-  d <- bridge_diagnostics(g$bs, iid = TRUE, nsim = 5000)
+  d <- bridge_diagnostics(g$bs, iid = TRUE)
   expect_equal(d$logml, g$bs$logml, tolerance = 1e-8)
   expect_equal(d$bridgesampling$difference, 0, tolerance = 1e-8)
   expect_lt(abs(d$logml - g$logZ), 5 * d$mcse)
@@ -24,7 +24,7 @@ test_that("chain ids follow bridgesampling's splitting rules", {
   expect_equal(length(bridge_chain_ids(999, 3, "stacked")), 3 * 999 - round(3 * 999 / 2))
   g <- make_gauss_bridge(chains = 4)
   expect_length(g$bs$q11, 4 * 1000)
-  d <- bridge_diagnostics(g$bs, chains = bridge_chain_ids(g$n, 4, "per_chain"), nsim = 5000)
+  d <- bridge_diagnostics(g$bs, chains = bridge_chain_ids(g$n, 4, "per_chain"))
   expect_equal(d$settings$M, 4L)
 })
 
@@ -35,7 +35,7 @@ test_that("cross-fitting returns a bridge object usable by bridge_diagnostics", 
   expect_s3_class(cf, "bridge")
   expect_identical(attr(cf, "bridgeoverlap_fold_by"), "chains")
   expect_length(cf$q11, 2 * g$n)
-  d <- suppressMessages(bridge_diagnostics(cf, G = 20, nsim = 5000))
+  d <- suppressMessages(bridge_diagnostics(cf, G = 20))
   expect_equal(d$settings$M, 2L)
   expect_equal(d$settings$K, 2L)
   expect_equal(d$logml, cf$logml, tolerance = 1e-10)
@@ -43,7 +43,7 @@ test_that("cross-fitting returns a bridge object usable by bridge_diagnostics", 
   # halves of every chain (exact only for independent draws)
   ch <- bridge_crossfit(g$samples, log_posterior = g$lp, data = NULL, lb = g$lb, ub = g$ub, fold = "halves")
   expect_identical(attr(ch, "bridgeoverlap_fold_by"), "halves")
-  dh <- suppressMessages(bridge_diagnostics(ch, nsim = 5000))
+  dh <- suppressMessages(bridge_diagnostics(ch))
   expect_equal(dh$settings$M, 4L)
   expect_lt(abs(dh$logml - g$logZ), 5 * dh$mcse)
 })

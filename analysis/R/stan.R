@@ -88,11 +88,7 @@ summarise_stan <- function(df, by) {
       flag_overlap = mean(!(x$n_ovP >= 30)),
       flag_overlap_concat_geyer = flag_rate(x, x$n_ovP_concat_geyer),
       flag_overlap_concat_ar = flag_rate(x, x$n_ovP_concat_ar),
-      flag_any_failure = mean(x$flag_any_failure, na.rm = TRUE),
-      flag_calibration = mean(x$flag_calibration, na.rm = TRUE),
-      flag_jackknife_variance = mean(x$flag_jackknife_variance, na.rm = TRUE),
-      flag_influential = mean(x$flag_influential_imax | x$flag_influential_grubbs, na.rm = TRUE),
-      runs_with_stuck_chains = mean(x$stuck_chains > 0, na.rm = TRUE),
+      flag_variance = mean(x$flag_variance, na.rm = TRUE),
       mean_divergent = if ("divergent" %in% names(x)) mean(x$divergent) else NA_real_,
       row.names = NULL)
   })

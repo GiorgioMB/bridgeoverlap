@@ -43,7 +43,7 @@ for (i in seq_len(nrow(cfg))) {
     x <- two_state_path(S, cc$gamma)
     yq <- sample(c(1L, 2L), S, replace = TRUE, prob = c(eps, 1 - eps))
     ap <- ifelse(x == 0L, Inf, 0); aq <- ifelse(yq == 1L, 0, -Inf)   # log Z = 0
-    d <- bridge_diagnostics(ap, aq, chains = 1, G = G, keep_responsibilities = TRUE, nsim = 2e4)
+    d <- bridge_diagnostics(ap, aq, chains = 1, G = G, keep_responsibilities = TRUE)
     if (!is.finite(d$logml)) return(data.frame(err = d$logml, se_geyer = NA, se_bm20 = NA, se_bmsq = NA, se_regen = NA, se_jack = NA))
     pp <- d$responsibilities$posterior
     se_of <- function(lrv) sqrt(S * d$V_prop + S * lrv) / d$NH0

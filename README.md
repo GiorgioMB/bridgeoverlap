@@ -19,9 +19,9 @@ computes:
 * a finite-sample confidence interval, valid at every sample size for independent draws
   (Bennett's inequality applied to the estimating function), and one for Markov chain
   output that needs a lower bound on the spectral gap but no thinning;
-* a calibration test for sampler failure and delete-a-group jackknife diagnostics for
-  misestimated autocorrelation and dominating blocks;
-* a decision rule that maps every flag to an action.
+* the **variance check** `V_jack <= chi2(G-1)/(G-1)`, a delete-a-group jackknife comparison
+  that catches misestimated autocorrelation, dominating blocks and chains that disagree;
+* a decision rule that maps each failed check to an action.
 
 ## Installation
 
@@ -37,14 +37,14 @@ library(bridgesampling)
 library(bridgeoverlap)
 
 bs <- bridge_sampler(fit, ...)     # any bridgesampling object
-d  <- bridge_diagnostics(bs)       # estimate, MCSE, n_ov, flags and the decision
+d  <- bridge_diagnostics(bs)       # estimate, MCSE, the two checks, the interval, the decision
 d
 bridge_report(d)                   # the same as a table
 
 # from log ratios log{f/g} of posterior and proposal draws
 d <- bridge_diagnostics(a_post, a_prop, chains = 4, iid = FALSE)
 bridge_fs_interval(a_post, a_prop)  # finite-sample interval (independent draws)
-bridge_fs_interval_mcmc(a_post, a_prop, gamma = 0.05)  # MCMC output, spectral gap >= 0.05
+bridge_diagnostics(a_post, a_prop, chains = 4, gamma = 0.05)  # with a spectral-gap bound
 
 # Bayes factor from two independent runs
 bridge_bayes_factor(d1, d2)
@@ -56,15 +56,12 @@ bridge_bayes_factor(d1, d2)
 ## The decision rule
 
 1. Check the sampler first: R-hat, effective sample sizes, divergences.
-2. **Overlap flag** (`n_ov < 10`, or `n_ovP < 30`): report the finite-sample interval
-   instead of `log Z-hat ± z MCSE`. Under poor overlap, improve the proposal or rerun from
-   scratch with both sample sizes multiplied by the printed factor; near a perfect
-   proposal, the finite-sample interval is the answer.
-3. **Failure flags** (calibration test, jackknife variance ratio, influential blocks,
-   stuck chains): recheck the sampler, estimate the long-run variance within chains,
-   inspect the dominating block, fit the proposal by cross-fitting.
-4. **No flag**: report `log Z-hat ± z MCSE` with `n_ov`, `I-hat` and the finite-sample
-   interval.
+2. **Overlap check fails** (`n_ov < 10`, or `n_ovP < 30`): report the finite-sample interval
+   instead of `log Z-hat ± z MCSE`. Under poor overlap, rerun from scratch with both sample
+   sizes multiplied by the printed factor, or improve the proposal.
+3. **Variance check fails**: the MCSE is too small. Run longer chains, estimate the long-run
+   variance within chains, and look for a dominating block or chains in different modes.
+4. **Both pass**: report `log Z-hat ± z MCSE`.
 
 No statistic of the bridge output can detect sampler errors that are constant on the
 overlap region, such as label switching in mixtures; posteriors with known symmetries

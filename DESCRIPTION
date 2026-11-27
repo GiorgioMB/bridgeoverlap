@@ -1,7 +1,7 @@
 Package: bridgeoverlap
 Type: Package
 Title: Overlap Checks and Failure Diagnostics for Bridge Sampling
-Version: 1.0.0
+Version: 1.1.0
 Authors@R: c(
     person("Giorgio", "Micaletto", email = "gmicaletto@uchicago.edu",
            role = c("aut", "cre")))
@@ -10,11 +10,12 @@ Description: Diagnostics for the optimal bridge sampling estimator of
     logistic regression that separates posterior from proposal draws. From the
     fitted responsibilities the package computes, at no extra cost, the
     delta-method Monte Carlo standard error (MCSE) with a within-chain long-run
-    variance, the estimated effective overlap and the overlap check, a
-    finite-sample confidence interval for independent draws based on Bennett's
-    inequality, a calibration test for sampler failure, and delete-a-group
-    jackknife diagnostics for Markov chain output, with a decision rule that maps
-    every flag to an action. Works on objects returned by
+    variance, and two checks of it: the overlap check, based on the estimated
+    effective overlap, and the variance check, a delete-a-group jackknife
+    comparison. It also gives a finite-sample confidence interval, based on
+    Bennett's inequality for independent draws and on a Bernstein inequality for
+    reversible Markov chains with a known bound on the spectral gap, and a
+    decision rule that maps each failed check to an action. Works on objects returned by
     'bridgesampling::bridge_sampler()' and provides helpers for 'cmdstanr' fits,
     including two-fold cross-fitting.
 License: MIT + file LICENSE

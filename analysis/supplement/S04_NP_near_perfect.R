@@ -18,10 +18,10 @@ summ <- function(res, extra) {
              fs_half = stats::median(res$fs_half), fs_cover = mean(res$fs_cover), med_lyapunov = stats::median(res$lyap), row.names = NULL)
 }
 one <- function(ap, aq) {
-  d <- bridge_diagnostics(ap, aq, iid = TRUE, eb = TRUE, jackknife = FALSE)   # eb: Proposition 2
+  d <- bridge_diagnostics(ap, aq, iid = TRUE, interval = TRUE, jackknife = FALSE)   # eb: Proposition 2
   data.frame(I = d$I, n_ov = d$n_ov, err = d$logml - logZ, mcse = d$mcse,
-             flagged = d$flags[["overlap"]], fs_half = (d$eb[["upper"]] - d$eb[["lower"]]) / 2,
-             fs_cover = d$eb[["lower"]] <= logZ && logZ <= d$eb[["upper"]], lyap = lyapunov_plugin(ap, aq, d$logml))
+             flagged = d$flags[["overlap"]], fs_half = (d$interval[["upper"]] - d$interval[["lower"]]) / 2,
+             fs_cover = d$interval[["lower"]] <= logZ && logZ <= d$interval[["upper"]], lyap = lyapunov_plugin(ap, aq, d$logml))
 }
 cfg <- expand.grid(S = c(1000L, 4000L), d = c(2L, 4L, 8L, 11L, 16L))
 if (BO_QUICK) cfg <- cfg[c(1, 6), ]

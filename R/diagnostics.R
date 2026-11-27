@@ -1,131 +1,93 @@
 #' Bridge sampling with diagnostics
 #'
-#' Computes the optimal bridge sampling estimate of \eqn{\log Z} together with
-#' the recommended diagnostics: the delta-method
-#' MCSE (with a long-run variance for Markov chain output), the effective
-#' overlap check \eqn{\hat n_{ov}} with \eqn{\hat I} and
-#' \eqn{N\hat H_0}, the MCMC effective overlap \eqn{\hat n^P_{ov}}, the finite-sample
-#' interval (independent draws), the calibration test for
-#' sampler failure and the delete-a-group jackknife comparisons
-#' \eqn{\mathcal V_{jack}}, \eqn{\mathcal I_{\max}} and \eqn{\mathcal G_{\max}}.
-#' No additional evaluations of the posterior or the proposal are needed.
+#' Computes the optimal bridge sampling estimate of \eqn{\log Z}, its delta-method MCSE
+#' (with a within-chain long-run variance for Markov chain output) and two checks of the
+#' MCSE: the overlap check, \eqn{\hat n_{ov} \ge 10} for independent draws and
+#' \eqn{\hat n^P_{ov} \ge 30} for Markov chain output, and the variance check, which
+#' compares the delete-a-group jackknife variance with the squared MCSE. It also returns a
+#' finite-sample confidence interval, valid at every sample size: for independent draws
+#' always, and for Markov chain output when a lower bound `gamma` on the spectral gap of
+#' the sampler is given. No additional evaluations of the posterior or the proposal are
+#' needed.
 #'
 #' @param x Either an object of class `bridge` returned by
-#'   [bridgesampling::bridge_sampler()] with `method = "normal"` and
-#'   `repetitions = 1`, or a numeric vector of log ratios
-#'   \eqn{\log f - \log g} at the posterior draws, in sampling order with
-#'   chains concatenated.
-#' @param a_prop Numeric vector of log ratios at the proposal draws (only when
-#'   `x` is numeric).
-#' @param chains Chain structure of the posterior draws: `NULL` (a single
-#'   sequence), the number of equal-length concatenated chains, or a vector of
-#'   chain identifiers of length \eqn{S_1} with contiguous runs. For `bridge`
-#'   objects created by [bridge_sampler_cmdstanr()] or [bridge_crossfit()] it is
-#'   read from the object; see [bridge_chain_ids()] for other objects.
-#' @param iid Logical: are the posterior draws independent (exact draws)? If
-#'   `TRUE`, \eqn{\hat\tau = 1}, the finite-sample interval and the
-#'   near-perfect accuracy bound are computed, and the overlap threshold is
-#'   `thresholds$n_ov`; otherwise \eqn{\hat\tau} is estimated with `tau_method`
-#'   and the threshold is `thresholds$n_ovP`.
-#' @param G Number of jackknife blocks; a multiple of the number of chains
-#'   (adjusted if necessary).
-#' @param alpha Overall level of the four failure tests, each run at
-#'   `alpha / 4`.
-#' @param delta Error probability for the finite-sample interval and bounds.
-#' @param tau_method Estimator of the integrated autocorrelation time of the
-#'   posterior responsibilities; see [iat()]. Ignored when `iid = TRUE`.
-#' @param thresholds List with the overlap thresholds `n_ov` (default 10, for
-#'   independent draws) and `n_ovP` (default 30, for MCMC).
-#' @param folds For cross-fitted output: a list with integer
-#'   vectors `post` (length \eqn{S_1}) and `prop` (length \eqn{S_2}) giving
-#'   the fold of every draw. Variances, autocorrelation times, jackknife blocks
-#'   and the finite-sample interval are then computed within folds. Read from
-#'   the object for [bridge_crossfit()] output.
-#' @param nsim Number of simulations for the null quantiles of the jackknife
-#'   influence statistics ([jackknife_null_quantiles()]).
-#' @param eb Logical: compute the finite-sample interval?
-#'   Defaults to `iid`; the interval is not valid for Markov chain output.
-#' @param jackknife Logical: compute the jackknife diagnostics and the
-#'   calibration test? Setting `FALSE` saves time in large simulation studies.
+#'   [bridgesampling::bridge_sampler()], or a numeric vector of log ratios
+#'   \eqn{\log\{f/g\}} at the posterior draws.
+#' @param a_prop Numeric vector of log ratios at the proposal draws (only when `x` is
+#'   numeric).
+#' @param chains Chain structure of the posterior draws: `NULL` (a single sequence), the
+#'   number of chains of equal length, or a vector of chain ids of length `length(x)`.
+#' @param iid Logical: are the posterior draws independent? If `FALSE`, the MCSE uses a
+#'   within-chain estimate of the integrated autocorrelation time.
+#' @param gamma For Markov chain output, an optional lower bound on the spectral gap of
+#'   the sampler; if given, the finite-sample interval is that of
+#'   [bridge_fs_interval_mcmc()].
+#' @param G Number of jackknife blocks; a multiple of the number of chains and folds.
+#' @param alpha Level of the variance check.
+#' @param delta Error probability of the finite-sample interval.
+#' @param tau_method Estimator of the integrated autocorrelation time of the posterior
+#'   responsibilities; see [iat()].
+#' @param thresholds List with the overlap thresholds `n_ov` (default 10, independent
+#'   draws) and `n_ovP` (default 30, Markov chain output).
+#' @param folds For cross-fitted output: a list with integer vectors `post` and `prop`
+#'   giving the fold of every draw (see [bridge_crossfit()]).
+#' @param interval Logical: compute the finite-sample interval?
+#' @param jackknife Logical: compute the variance check?
 #' @param tol,maxit Tolerance and iteration limit of the root solver.
 #' @param keep_responsibilities Logical: store the fitted responsibilities?
 #' @param ... Passed to methods.
-#'
-#' @return An object of class `bridge_diagnostics`: a list whose scalar
-#'   elements include `logml` (the estimate \eqn{\hat c}), `mcse`
-#'   (\eqn{\hat\sigma}, or \eqn{\hat\sigma_P} for MCMC), `mcse_iid` (ignoring
-#'   autocorrelation), `mcse_log1p` (the \eqn{\{\log(1+\hat\sigma^2)\}^{1/2}}
-#'   convention of \pkg{bridgesampling}), `n_ov`, `I`, `NH0`, `NH`, `n_P`,
-#'   `n_ovP`, `tau`, `stuck_chains` (chains whose responsibilities are
-#'   constant, i.e. the sampler never moved), `T`, `t_T`, `p_T`, `V_jack`,
-#'   `I_max`, `G_max`, the
-#'   finite-sample interval `eb`, the lower confidence bound `NH_lower` for
-#'   \eqn{NH} and the absolute `accuracy_bound` (independent draws), together
-#'   with `flags`, `thresholds`, `jackknife` and `settings`. Use
-#'   [as.data.frame()] for a one-row summary.
-#'
+#' @return An object of class `bridge_diagnostics`: a list with the estimate `logml`, the
+#'   `mcse`, the estimated effective overlaps `n_ov` and `n_ovP`, the autocorrelation time
+#'   `tau`, the jackknife variance ratio `V_jack`, the finite-sample `interval`, the
+#'   logical `flags` (`overlap`, `variance`), the `decision`, the `actions` and further
+#'   quantities used by the analysis scripts.
 #' @details
-#' Interpretation:
-#' * **Overlap.** When \eqn{\hat I \le 1/2} (poor overlap), \eqn{\hat n_{ov}}
-#'   counts the ambiguous draws and controls the accuracy of the estimate and
-#'   of its MCSE; the run is flagged if \eqn{\hat n_{ov} < 10} (independent
-#'   draws) or \eqn{\hat n^P_{ov} < 30} (MCMC). When \eqn{\hat I > 1/2} the
-#'   proposal is nearly exact and a small \eqn{\hat n_{ov}} is harmless; the run
-#'   is then flagged only if the lower confidence bound `NH_lower` for
-#'   \eqn{NH} is below \eqn{16\log(2/\delta)}, in which case
-#'   the accuracy of the estimate cannot be validated. Otherwise, for independent
-#'   draws, an absolute accuracy bound is reported.
-#' * **Calibration test.** \eqn{\mathcal T = 1 - \hat H/\hat H_0}, the
-#'   derivative of the fixed-point map at the solution, studentized with the
-#'   jackknife and compared with \eqn{t_{G-1}}. It detects samplers whose error
-#'   varies with the responsibilities on the overlap region (e.g. mode
-#'   imbalance). No statistic of the bridge output can detect errors that are
-#'   constant on the overlap region.
-#' * **Jackknife.** \eqn{\mathcal V_{jack}} compares a batch-type variance with
-#'   the MCSE (flags an underestimated autocorrelation), \eqn{\mathcal I_{\max}}
-#'   and \eqn{\mathcal G_{\max}} flag a single dominating block.
+#' * **Overlap check.** The MCSE is reliable when the estimated effective overlap is
+#'   large. Below the threshold, report the finite-sample interval. Under poor overlap, a
+#'   fresh run with more draws raises \eqn{\hat n_{ov}} in proportion; near a perfect
+#'   proposal it does not, and the finite-sample interval is the answer.
+#' * **Variance check.** \eqn{\mathcal V_{jack}}, the jackknife variance over \eqn{G}
+#'   blocks divided by the squared MCSE, is approximately \eqn{\chi^2_{G-1}/(G-1)} when the
+#'   MCSE is right. With blocks aligned with the chains, misestimated autocorrelation, a
+#'   dominating block and chains that disagree all make it large.
 #'
 #' The estimate uses \eqn{s_1 = S_1/N}. It coincides with the `logml` of
-#' [bridgesampling::bridge_sampler()] when that is called with
-#' `use_neff = FALSE`; with the default `use_neff = TRUE`, \pkg{bridgesampling}
-#' replaces \eqn{S_1} by a median effective sample size inside the bridge
-#' function, which changes the estimator slightly.
-#'
+#' [bridgesampling::bridge_sampler()] when that is called with `use_neff = FALSE`; with the
+#' default `use_neff = TRUE`, \pkg{bridgesampling} replaces \eqn{S_1} by a median effective
+#' sample size inside the bridge function, which changes the estimator slightly.
 #' @examples
 #' set.seed(1)
 #' S <- 2000
 #' x <- rnorm(S); y <- rnorm(S, 0.5, 1.4)            # posterior and proposal draws
 #' a <- function(t) dnorm(t, log = TRUE) - dnorm(t, 0.5, 1.4, log = TRUE)  # log Z = 0
-#' d <- bridge_diagnostics(a(x), a(y), iid = TRUE, nsim = 2e4)
+#' d <- bridge_diagnostics(a(x), a(y), iid = TRUE)
 #' d
-#' as.data.frame(d)
+#' bridge_report(d)
 #' @export
 bridge_diagnostics <- function(x, ...) UseMethod("bridge_diagnostics")
 
 #' @rdname bridge_diagnostics
 #' @export
-bridge_diagnostics.default <- function(x, a_prop, chains = NULL, iid = FALSE,
+bridge_diagnostics.default <- function(x, a_prop, chains = NULL, iid = FALSE, gamma = NULL,
                                        G = 20L, alpha = 0.05, delta = 0.05,
                                        tau_method = c("within", "multichain",
                                                       "concat_geyer", "concat_ar"),
-                                       thresholds = list(),
-                                       folds = NULL, nsim = 1e5L,
-                                       eb = iid, jackknife = TRUE,
+                                       thresholds = list(), folds = NULL,
+                                       interval = TRUE, jackknife = TRUE,
                                        tol = 1e-12, maxit = 500L,
                                        keep_responsibilities = FALSE, ...) {
   tau_method <- match.arg(tau_method)
   .check_scalar(alpha, "alpha", 0, 1)
   .check_scalar(delta, "delta", 0, 1)
+  if (!is.null(gamma) && (!is.numeric(gamma) || length(gamma) != 1L || !is.finite(gamma) ||
+                          gamma <= 0 || gamma > 1))
+    stop("`gamma` must be NULL or a number in (0, 1].", call. = FALSE)
   thr <- utils::modifyList(list(n_ov = 10, n_ovP = 30), thresholds)
   a_post <- .clean_log_ratios(x, "posterior")
   a_prop <- .clean_log_ratios(a_prop, "proposal")
-  S1 <- length(a_post)
-  S2 <- length(a_prop)
+  S1 <- length(a_post); S2 <- length(a_prop)
   if (S1 < 2L || S2 < 2L) stop("Both samples need at least two draws.", call. = FALSE)
-  N <- S1 + S2
-  s1 <- S1 / N
-  s2 <- S2 / N
-  lr <- log(S1 / S2)
+  N <- S1 + S2; s1 <- S1 / N; s2 <- S2 / N; lr <- log(S1 / S2)
   # without a chain structure, every fold of cross-fitted output is its own sequence
   if (is.null(chains) && !is.null(folds) && length(folds$post) == S1) chains <- folds$post
   chain_lengths <- .chain_lengths(chains, S1)
@@ -134,128 +96,68 @@ bridge_diagnostics.default <- function(x, a_prop, chains = NULL, iid = FALSE,
   fd <- .check_folds(folds, S1, S2, chain_id)
   K <- fd$K
   G <- if (jackknife) .resolve_G(G, M, chain_lengths, S2, K) else NA_integer_
-
-  # Step 2: the estimate (root of the pooled estimating function).
   root <- .bridge_root(a_post, a_prop, lr, tol = tol, maxit = maxit)
   chat <- root$c
-  settings <- list(S1 = S1, S2 = S2, N = N, s1 = s1, s2 = s2, M = M,
-                   chain_lengths = chain_lengths, G = G, K = K, alpha = alpha,
-                   delta = delta, iid = iid, eb = eb, jackknife = jackknife,
+  n0 <- if (iid) thr$n_ov else thr$n_ovP
+  settings <- list(S1 = S1, S2 = S2, N = N, s1 = s1, s2 = s2, M = M, chain_lengths = chain_lengths,
+                   G = G, K = K, alpha = alpha, delta = delta, iid = iid, gamma = gamma,
+                   n0 = n0, interval = interval, jackknife = jackknife,
                    tau_method = if (iid) "iid" else tau_method)
-  if (!is.finite(chat)) return(.no_overlap_result(chat, root, settings, thr))
+  if (!is.finite(chat)) return(.no_overlap_result(chat, root, settings))
 
-  # Step 3: responsibilities, overlap and contraction factor (pooled over folds).
-  pp <- .resp(a_post, chat, lr)
-  pq <- .resp(a_prop, chat, lr)
+  # Responsibilities and overlap, pooled over folds.
+  pp <- .resp(a_post, chat, lr); pq <- .resp(a_prop, chat, lr)
   NH0 <- sum(pp)
-  NH <- sum(.resp_var(a_post, chat, lr)) + sum(.resp_var(a_prop, chat, lr))
-  I_hat <- (NH / N) / (s1 * s2)
-  T_stat <- 1 - NH / NH0
+  I_hat <- (sum(.resp_var(a_post, chat, lr)) + sum(.resp_var(a_prop, chat, lr))) / (N * s1 * s2)
 
-  # Step 4: estimated effective overlap and MCSE. Variances are computed within folds: with
-  # cross-fitting each fold has its own responsibility function.
-  fold_stats <- lapply(seq_len(K), function(k) {
+  # Estimated effective overlap and MCSE, with variances within folds.
+  fs <- do.call(rbind, lapply(seq_len(K), function(k) {
     ip <- fd$post == k; iq <- fd$prop == k
-    V_post <- stats::var(pp[ip]); V_prop <- stats::var(pq[iq])
     tau <- if (iid) 1 else iat(pp[ip], rle(chain_id[ip])$lengths, method = tau_method)
-    c(S1 = sum(ip), S2 = sum(iq), V_post = V_post, V_prop = V_prop, tau = tau,
-      a = sum(pp[ip]), b = sum(1 - pq[iq]))
-  })
-  fs <- do.call(rbind, fold_stats)
-  V_post <- if (K == 1L) fs[1, "V_post"] else sum(fs[, "S1"] * fs[, "V_post"]) / S1
-  V_prop <- if (K == 1L) fs[1, "V_prop"] else sum(fs[, "S2"] * fs[, "V_prop"]) / S2
+    c(S1 = sum(ip), S2 = sum(iq), V_post = stats::var(pp[ip]), V_prop = stats::var(pq[iq]), tau = tau)
+  }))
+  prop_term <- sum(fs[, "S2"] * fs[, "V_prop"])
   post_term <- sum(fs[, "S1"] * fs[, "V_post"])
-  n_ov <- sum(fs[, "S2"] * fs[, "V_prop"]) + post_term
-  n_P <- sum(fs[, "S2"] * fs[, "V_prop"]) + sum(fs[, "S1"] * fs[, "V_post"] * fs[, "tau"])
-  tau <- if (iid) 1 else if (post_term > 0) sum(fs[, "S1"] * fs[, "V_post"] * fs[, "tau"]) / post_term else NA_real_
-  # chains whose responsibilities never change: the sampler did not move
-  stuck_chains <- if (iid) 0L else sum(vapply(
-    split(pp, chain_id),
-    function(v) length(v) > 1L && stats::var(v) == 0, logical(1)))
+  n_ov <- prop_term + post_term
+  n_P <- prop_term + sum(fs[, "S1"] * fs[, "V_post"] * fs[, "tau"])
+  tau <- if (iid) 1 else if (post_term > 0) (n_P - prop_term) / post_term else NA_real_
   mcse <- sqrt(n_P) / NH0
-  mcse_iid <- sqrt(n_ov) / NH0
   n_ovP <- if (n_P > 0) n_ov^2 / n_P else NA_real_
 
-  # Step 5: finite-sample results, reported in every regime. Lower confidence bound
-  # for N H, per fold at level delta / K; for independent draws the
-  # accuracy bound and the finite-sample interval.
-  lg <- log(2 * K / delta)
-  NH_lower_k <- pmax(sqrt(pmin(fs[, "a"], fs[, "b"])) - sqrt(2 / 3 * lg), 0)^2
-  NH_lower <- sum(NH_lower_k)
-  NH_required <- 16 * lg
-  accuracy_bound <- if (iid && all(NH_lower_k >= NH_required)) max(2 * sqrt(lg / NH_lower_k)) else NA_real_
-  eb_int <- c(lower = NA_real_, upper = NA_real_)
-  if (eb) eb_int <- .fs_interval(a_post, a_prop, lr, chat, delta, fold_post = if (K > 1L) fd$post, fold_prop = if (K > 1L) fd$prop)
+  # Finite-sample interval: independent draws, or Markov chain output with a gap bound.
+  int <- c(lower = NA_real_, upper = NA_real_)
+  if (interval && iid) {
+    int <- .fs_interval(a_post, a_prop, lr, chat, delta,
+                        fold_post = if (K > 1L) fd$post, fold_prop = if (K > 1L) fd$prop)
+  } else if (interval && !is.null(gamma) && K == 1L) {
+    int <- .hull_interval(function(cc) .fs_F_mcmc(cc, a_post, a_prop, lr, delta, gamma),
+                          chat, a_post, a_prop, lr, 150L)
+  }
 
-  # Steps 6-7: jackknife, with blocks within chains and within folds.
-  c_b <- T_b <- NA_real_
+  # Variance check: delete-a-group jackknife, with blocks within chains and folds.
+  V_jack <- NA_real_; c_b <- NULL
   if (jackknife) {
     bpost <- .block_ids_post(chain_lengths, G)
     bprop <- if (K == 1L) .block_ids_prop(S2, G) else .block_ids_prop_folds(fd$prop, G)
-    jk <- .jackknife(a_post, a_prop, lr, chat, bpost, bprop, G, tol, maxit)
-    c_b <- jk$c_b
-    T_b <- jk$T_b
+    c_b <- .jackknife(a_post, a_prop, lr, chat, bpost, bprop, G, tol, maxit)
+    if (all(is.finite(c_b))) V_jack <- (G - 1) / G * sum((c_b - mean(c_b))^2) / mcse^2
   }
-  if (jackknife && all(is.finite(c_b)) && all(is.finite(T_b))) {
-    c_bar <- mean(c_b)
-    V_jack <- (G - 1) / G * sum((c_b - c_bar)^2) / mcse^2
-    I_max <- max(abs(c_b - chat)) / mcse
-    Q <- G * chat - (G - 1) * c_b
-    G_max <- if (stats::sd(Q) > 0) max(abs(Q - mean(Q))) / stats::sd(Q) else NA_real_
-    se_T <- sqrt((G - 1) / G * sum((T_b - mean(T_b))^2))
-    t_T <- if (se_T > 0) T_stat / se_T else NA_real_
-  } else {
-    V_jack <- I_max <- G_max <- t_T <- se_T <- NA_real_
-  }
-  p_T <- if (is.finite(t_T)) 2 * stats::pt(-abs(t_T), df = G - 1) else NA_real_
+  v0 <- if (jackknife) stats::qchisq(1 - alpha, df = G - 1) / (G - 1) else NA_real_
 
-  # Step 8: the overlap check, a fixed threshold on n_ov-hat (n_ovP-hat for MCMC output).
-  # Near-perfect runs are flagged by design and get the finite-sample interval.
-  crit <- list(t_T = NA_real_, V_jack = NA_real_, I_max = NA_real_, G_max = NA_real_)
-  if (jackknife) {
-    q_jack <- jackknife_null_quantiles(G, probs = 1 - alpha / 4, nsim = nsim)
-    crit <- list(
-      t_T = stats::qt(1 - alpha / 8, df = G - 1),
-      V_jack = stats::qchisq(1 - alpha / 4, df = G - 1) / (G - 1),
-      I_max = q_jack["I_max", 1],
-      G_max = q_jack["G_max", 1]
-    )
-  }
-  base <- if (iid) thr$n_ov else thr$n_ovP
   stat <- if (iid) n_ov else n_ovP
-  n_ov_threshold <- base
-  overlap_flag <- !isTRUE(stat >= base)
-  stat_name <- if (iid) "n_ov" else "n_ovP"
-  overlap_reason <- if (overlap_flag) sprintf("%s-hat = %s < %s", stat_name, .fmt(stat, 3), .fmt(base, 3)) else ""
-  test <- function(stat, cv) if (jackknife && is.finite(stat)) stat > cv else NA
-  flags <- c(
-    overlap = overlap_flag,
-    calibration = test(abs(t_T), crit$t_T),
-    jackknife_variance = test(V_jack, crit$V_jack),
-    influential_block_imax = test(I_max, crit$I_max),
-    influential_block_grubbs = test(G_max, crit$G_max)
-  )
-  dec <- .decide(flags, stat = stat, threshold = n_ov_threshold, stuck = stuck_chains,
-                 iid = iid, eb_int = eb_int, I_hat = I_hat)
-
+  flags <- c(overlap = !isTRUE(stat >= n0),
+             variance = if (is.finite(V_jack)) V_jack > v0 else NA)
+  dec <- .decide(flags, stat = stat, n0 = n0, I_hat = I_hat, iid = iid,
+                 have_interval = all(is.finite(int)))
   out <- list(
-    logml = chat, mcse = mcse, mcse_iid = mcse_iid,
-    mcse_log1p = sqrt(log1p(mcse^2)),
-    mcse_mw = sqrt(max(1 / NH0 - 1 / (N * s1 * s2), 0)),
-    n_ov = n_ov, I = I_hat, NH0 = NH0, NH = NH, n_P = n_P, n_ovP = n_ovP,
-    tau = tau, stuck_chains = stuck_chains, V_post = V_post, V_prop = V_prop,
-    T = T_stat, t_T = t_T, p_T = p_T, V_jack = V_jack, I_max = I_max,
-    G_max = G_max, eb = eb_int, NH_lower = NH_lower, NH_required = NH_required,
-    accuracy_bound = accuracy_bound, n_ov_threshold = n_ov_threshold,
-    overlap_reason = overlap_reason,
-    flags = flags, decision = dec$decision, actions = dec$actions,
-    draws_factor = dec$draws_factor,
-    thresholds = c(thr, crit),
-    regime = if (I_hat <= 0.5) "poor overlap" else "near-perfect proposal",
-    folds = if (K > 1L) fs else NULL,
-    jackknife = if (jackknife) list(c_b = c_b, T_b = T_b, se_T = se_T) else NULL,
-    solver = root[c("iterations", "converged", "status")],
-    settings = settings
+    logml = chat, mcse = mcse, n_ov = n_ov, n_ovP = n_ovP, tau = tau, V_jack = V_jack,
+    interval = int, flags = flags, decision = dec$decision, actions = dec$actions,
+    draws_factor = dec$draws_factor, critical = c(n0 = n0, V_jack = v0),
+    I = I_hat, NH0 = NH0, n_P = n_P, mcse_iid = sqrt(n_ov) / NH0,
+    V_post = if (K == 1L) fs[1, "V_post"] else post_term / S1,
+    V_prop = if (K == 1L) fs[1, "V_prop"] else prop_term / S2,
+    folds = if (K > 1L) fs else NULL, jackknife = if (jackknife) list(c_b = c_b) else NULL,
+    solver = root[c("iterations", "converged", "status")], settings = settings
   )
   if (keep_responsibilities) out$responsibilities <- list(posterior = pp, proposal = pq)
   class(out) <- "bridge_diagnostics"
@@ -290,32 +192,30 @@ bridge_diagnostics.default <- function(x, a_prop, chains = NULL, iid = FALSE,
   list(K = K, post = fp, prop = fq)
 }
 
-# Decision rule: pass if no flag is raised; otherwise map each flag
-# to an action. The overlap action quantifies "more draws in proportion to 1/H":
-# n_ov grows linearly in N at a fixed proposal, so the factor is threshold / n_ov.
-.decide <- function(flags, stat, threshold, stuck, iid, eb_int, I_hat = NA_real_) {
-  raised <- names(flags)[flags %in% TRUE]
-  if (isTRUE(stuck > 0)) raised <- c(raised, "stuck_chains")
-  factor <- if (isTRUE(flags[["overlap"]]) && is.finite(stat) && stat > 0 && is.finite(threshold)) {
-    max(1, threshold / stat)
-  } else NA_real_
-  act <- c(
-    overlap = if (isTRUE(I_hat > 0.5)) {
-      paste0("near-perfect proposal: no statistic of the bridge output can validate the normal interval here, ",
-             "and more draws do not raise n_ov; ", if (iid) "report the finite-sample interval, which is short in this regime" else
-             "thin the chain to a lag with a mixing bound and report the finite-sample interval of the thinned draws")
+# Decision rule: report log Z-hat +/- z MCSE when both checks pass; otherwise map each
+# flag to an action. Under poor overlap n_ov grows linearly in N at a fixed proposal, so
+# the factor of more draws needed is n0 / n_ov; near a perfect proposal it does not grow.
+.decide <- function(flags, stat, n0, I_hat, iid, have_interval) {
+  factor <- if (isTRUE(flags[["overlap"]]) && is.finite(stat) && stat > 0) max(1, n0 / stat) else NA_real_
+  use <- if (have_interval) "report the finite-sample interval" else if (iid)
+    "the finite-sample interval is unbounded" else
+    "report the finite-sample interval given a lower bound on the spectral gap (argument gamma)"
+  act <- character()
+  if (isTRUE(flags[["overlap"]])) {
+    act <- c(act, if (isTRUE(I_hat > 0.5)) {
+      paste0("near-perfect proposal: the MCSE cannot be checked here; ", use, ", which is short in this regime")
     } else if (is.finite(factor)) {
-      sprintf("rerun from scratch with both samples at least %s times larger (the draws needed scale as 1/H; do not extend this run until it passes), or improve the proposal (warp-III, heavier tails, mixture)%s",
-              .fmt(factor, 2), if (iid) "; meanwhile report the finite-sample interval" else "")
-    } else "the samples (almost) do not overlap: improve the proposal before adding draws",
-    calibration = "recheck the sampler (dispersed initial values, compare chains, mode balance) and refit the proposal by cross-fitting",
-    jackknife_variance = "the MCSE is too small: run longer chains and estimate the long-run variance within chains",
-    influential_block_imax = "one block dominates: inspect it for a transient or a rare-mode visit; run longer chains or recheck the sampler",
-    influential_block_grubbs = "one block dominates: inspect it for a transient or a rare-mode visit; run longer chains or recheck the sampler",
-    stuck_chains = "a chain never moved: recheck the sampler before bridge sampling"
-  )
-  list(decision = if (length(raised)) "do not report the normal interval" else "report log Z-hat +/- z MCSE",
-       actions = unique(unname(act[raised])), draws_factor = factor)
+      sprintf("poor overlap: %s, or rerun from scratch with both samples at least %s times larger (do not extend this run), or improve the proposal",
+              use, .fmt(factor, 2))
+    } else "the samples (almost) do not overlap: improve the proposal before adding draws")
+  }
+  if (isTRUE(flags[["variance"]])) {
+    act <- c(act, paste("the MCSE is too small (the jackknife and long-run variances disagree):",
+                        "run longer chains, estimate the long-run variance within chains, and look for",
+                        "a dominating block or chains in different modes"))
+  }
+  list(decision = if (length(act)) "do not report log Z-hat +/- z MCSE" else "report log Z-hat +/- z MCSE",
+       actions = act, draws_factor = factor)
 }
 
 .chain_lengths <- function(chains, S1) {
@@ -357,24 +257,16 @@ bridge_diagnostics.default <- function(x, a_prop, chains = NULL, iid = FALSE,
   G
 }
 
-.no_overlap_result <- function(chat, root, settings, thr) {
+.no_overlap_result <- function(chat, root, settings) {
   na <- NA_real_
   out <- list(
-    logml = chat, mcse = na, mcse_iid = na, mcse_log1p = na, mcse_mw = na,
-    n_ov = 0, I = 0, NH0 = 0, NH = 0, n_P = 0, n_ovP = 0, tau = na, stuck_chains = NA_integer_,
-    V_post = na, V_prop = na, T = na, t_T = na, p_T = na, V_jack = na,
-    I_max = na, G_max = na,
-    eb = c(lower = if (settings$iid) -Inf else na, upper = if (settings$iid) Inf else na),
-    NH_lower = na, NH_required = na, accuracy_bound = na, n_ov_threshold = na,
-    overlap_reason = "the samples do not overlap",
-    flags = c(overlap = TRUE, calibration = NA, jackknife_variance = NA,
-              influential_block_imax = NA, influential_block_grubbs = NA),
-    decision = "do not report the normal interval",
+    logml = chat, mcse = na, n_ov = 0, n_ovP = 0, tau = na, V_jack = na,
+    interval = c(lower = -Inf, upper = Inf), flags = c(overlap = TRUE, variance = NA),
+    decision = "do not report log Z-hat +/- z MCSE",
     actions = "the samples do not overlap: improve the proposal before adding draws",
-    draws_factor = NA_real_,
-    thresholds = thr, regime = "no overlap", folds = NULL,
-    jackknife = NULL, solver = root[c("iterations", "converged", "status")],
-    settings = settings
+    draws_factor = na, critical = c(n0 = settings$n0, V_jack = na),
+    I = 0, NH0 = 0, n_P = 0, mcse_iid = na, V_post = na, V_prop = na, folds = NULL, jackknife = NULL,
+    solver = root[c("iterations", "converged", "status")], settings = settings
   )
   class(out) <- "bridge_diagnostics"
   out
@@ -384,57 +276,28 @@ bridge_diagnostics.default <- function(x, a_prop, chains = NULL, iid = FALSE,
 print.bridge_diagnostics <- function(x, digits = 4, ...) {
   st <- x$settings
   f <- function(v, d = digits) if (is.null(v) || is.na(v)) "NA" else format(signif(v, d), scientific = FALSE)
-  cat("Bridge sampling diagnostics (",
+  pf <- function(flag) if (is.na(flag)) "" else if (flag) "  FLAG" else "  pass"
+  cat("Bridge sampling (",
       if (st$iid) "independent draws" else sprintf("MCMC, %d chain%s", st$M, if (st$M > 1) "s" else ""),
-      "; S1 = ", st$S1, ", S2 = ", st$S2,
-      if (isTRUE(st$jackknife)) paste0(", G = ", st$G) else "", ")\n", sep = "")
+      "; S1 = ", st$S1, ", S2 = ", st$S2, if (isTRUE(st$K > 1L)) sprintf(", %d folds", st$K) else "", ")\n", sep = "")
   if (!is.finite(x$logml)) {
     cat("  log Z-hat = ", x$logml, ": the samples do not overlap (", x$solver$status, ").\n", sep = "")
     return(invisible(x))
   }
-  cat(sprintf("  log Z-hat          %s   MCSE %s%s\n", f(x$logml, 8), f(x$mcse),
-              if (st$iid) "" else sprintf("   (ignoring autocorrelation: %s)", f(x$mcse_iid))))
-  if (isTRUE(st$eb)) {
-    cat(sprintf("  %g%% finite-sample interval  [%s, %s]\n", 100 * (1 - st$delta),
-                f(x$eb[["lower"]], 8), f(x$eb[["upper"]], 8)))
-  }
-  cat(sprintf("  Overlap            n_ov-hat %s   I-hat %s   N*H0-hat %s   (%s; threshold %s)\n",
-              f(x$n_ov), f(x$I, 3), f(x$NH0), x$regime, f(x$n_ov_threshold, 3)))
-  if (!st$iid) {
-    cat(sprintf("  MCMC               tau-hat %s (%s)   n_ovP-hat %s\n",
-                f(x$tau), st$tau_method, f(x$n_ovP)))
-    if (isTRUE(x$stuck_chains > 0)) {
-      cat(sprintf("  WARNING: %d of %d chains have constant responsibilities (the sampler did not move).\n",
-                  x$stuck_chains, st$M))
-    }
-  }
-  cat(sprintf("  Calibration test   T %s   t_T %s   p %s\n", f(x$T), f(x$t_T, 3), f(x$p_T, 3)))
+  cat(sprintf("  log Z-hat        %s   MCSE %s\n", f(x$logml, 8), f(x$mcse)))
+  cat(sprintf("  Overlap check    %s = %s (>= %s)%s%s\n", if (st$iid) "n_ov-hat" else "n_ovP-hat",
+              f(if (st$iid) x$n_ov else x$n_ovP), f(st$n0, 3),
+              if (st$iid) "" else sprintf(", tau-hat = %s", f(x$tau, 3)), pf(x$flags[["overlap"]])))
   if (isTRUE(st$jackknife)) {
-    cat(sprintf("  Jackknife          V_jack %s   I_max %s   G_max %s\n",
-                f(x$V_jack, 3), f(x$I_max, 3), f(x$G_max, 3)))
+    cat(sprintf("  Variance check   V_jack = %s (<= %s, G = %d)%s\n", f(x$V_jack, 3), f(x$critical[["V_jack"]], 3),
+                st$G, pf(x$flags[["variance"]])))
   }
-  if (isTRUE(st$K > 1L)) cat(sprintf("  Cross-fitted       %d folds; variances, blocks and bounds within folds\n", st$K))
-  if (is.finite(x$NH_lower %||% NA)) {
-    cat(sprintf("  Finite-sample      N*H >= %s (prob. >= %g)%s\n", f(x$NH_lower), 1 - st$delta,
-                if (st$iid && is.finite(x$accuracy_bound))
-                  sprintf(";  |log Z-hat - log Z| <= %s  (prob. >= %g)", f(x$accuracy_bound), 1 - 2 * st$delta)
-                else if (st$iid) sprintf(";  accuracy bound needs N*H >= %s", f(x$NH_required)) else ""))
+  if (all(is.finite(x$interval)) || st$iid) {
+    cat(sprintf("  %g%% finite-sample interval [%s, %s]\n", 100 * (1 - st$delta),
+                f(x$interval[["lower"]], 8), f(x$interval[["upper"]], 8)))
   }
-  fl <- x$flags
-  lab <- c(overlap = "overlap check", calibration = "calibration test (sampler failure)",
-           jackknife_variance = "jackknife variance (MCSE too small)",
-           influential_block_imax = "influential block (I_max)",
-           influential_block_grubbs = "influential block (G_max)")
-  if (isTRUE(fl[["overlap"]]) && nzchar(x$overlap_reason %||% "")) lab[["overlap"]] <- sprintf("overlap (%s)", x$overlap_reason)
-  raised <- names(fl)[fl %in% TRUE]
-  if (length(raised)) {
-    cat(sprintf("  FLAGS (alpha = %g, failure tests at alpha/4): %s\n", st$alpha,
-                paste(lab[raised], collapse = "; ")))
-  } else {
-    cat(sprintf("  No flags raised (alpha = %g, failure tests at alpha/4).\n", st$alpha))
-  }
-  cat("  Decision: ", x$decision %||% "", "\n", sep = "")
-  for (a in x$actions %||% character()) cat("    - ", a, "\n", sep = "")
+  cat("  Decision: ", x$decision, "\n", sep = "")
+  for (a in x$actions) cat("    - ", a, "\n", sep = "")
   invisible(x)
 }
 
@@ -442,24 +305,13 @@ print.bridge_diagnostics <- function(x, digits = 4, ...) {
 as.data.frame.bridge_diagnostics <- function(x, row.names = NULL, optional = FALSE, ...) {
   st <- x$settings
   data.frame(
-    logml = x$logml, mcse = x$mcse, mcse_iid = x$mcse_iid, mcse_log1p = x$mcse_log1p,
-    n_ov = x$n_ov, I = x$I, NH0 = x$NH0, NH = x$NH, n_P = x$n_P, n_ovP = x$n_ovP,
-    tau = x$tau, stuck_chains = x$stuck_chains, T = x$T, t_T = x$t_T, p_T = x$p_T, V_jack = x$V_jack,
-    I_max = x$I_max, G_max = x$G_max,
-    eb_lower = x$eb[["lower"]], eb_upper = x$eb[["upper"]],
-    NH_lower = x$NH_lower, accuracy_bound = x$accuracy_bound,
-    n_ov_threshold = x$n_ov_threshold %||% NA_real_, draws_factor = x$draws_factor %||% NA_real_,
-    pass = !any(x$flags %in% TRUE) && !isTRUE(x$stuck_chains > 0),
-    overlap_reason = x$overlap_reason %||% "",
-    flag_overlap = x$flags[["overlap"]],
-    flag_calibration = x$flags[["calibration"]],
-    flag_jackknife_variance = x$flags[["jackknife_variance"]],
-    flag_influential_imax = x$flags[["influential_block_imax"]],
-    flag_influential_grubbs = x$flags[["influential_block_grubbs"]],
-    flag_any_failure = if (all(is.na(x$flags[-1L]))) NA else any(x$flags[-1L] %in% TRUE),
+    logml = x$logml, mcse = x$mcse, n_ov = x$n_ov, n_ovP = x$n_ovP, tau = x$tau, V_jack = x$V_jack,
+    interval_lower = x$interval[["lower"]], interval_upper = x$interval[["upper"]],
+    flag_overlap = x$flags[["overlap"]], flag_variance = x$flags[["variance"]],
+    pass = !any(x$flags %in% TRUE), draws_factor = x$draws_factor,
+    I = x$I, NH0 = x$NH0, n_P = x$n_P, mcse_iid = x$mcse_iid,
     S1 = st$S1, S2 = st$S2, M = st$M, G = st$G, K = st$K %||% 1L, iid = st$iid,
-    tau_method = st$tau_method,
-    row.names = row.names, stringsAsFactors = FALSE
+    tau_method = st$tau_method, row.names = row.names, stringsAsFactors = FALSE
   )
 }
 

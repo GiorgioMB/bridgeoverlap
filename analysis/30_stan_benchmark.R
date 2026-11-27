@@ -46,8 +46,6 @@ get_truth <- function(cc) {
   }
   truth_cache[[key]]
 }
-invisible(jackknife_null_quantiles(20L, probs = 1 - 0.05 / 4))
-invisible(jackknife_null_quantiles(16L, probs = 1 - 0.05 / 4))
 cores <- as.integer(Sys.getenv("BO_STAN_CORES", "1"))
 for (cc in configs) {
   dat <- get_data(cc$data); logZ <- get_truth(cc)
@@ -81,7 +79,7 @@ for (cc in configs) {
       t_c <- system.time(bc <- bridge_sampler_cmdstanr(sf$fit, crossfit = TRUE))[["elapsed"]]
       dc <- suppressMessages(bridge_diagnostics(bc, G = 16L))
       row$cf_error <- dc$logml - logZ; row$cf_mcse <- dc$mcse; row$cf_n_ov <- dc$n_ov; row$cf_n_ovP <- dc$n_ovP
-      row$cf_pass <- !any(dc$flags %in% TRUE) && !isTRUE(dc$stuck_chains > 0); row$time_crossfit <- t_c
+      row$cf_pass <- !any(dc$flags %in% TRUE); row$time_crossfit <- t_c
     }
     row
   })

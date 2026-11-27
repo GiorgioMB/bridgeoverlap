@@ -36,7 +36,7 @@ runs <- do.call(rbind, lapply(names(CONF), function(cf) do.call(rbind, lapply(SS
   fam <- CONF[[cf]](); msg("khat:", cf, "S =", S)
   out <- run_reps(R, function(r) {
     ap <- fam$lr(fam$rpost(S)); aq <- fam$lr(fam$rprop(S))            # log Z = 0
-    d <- bridge_diagnostics(ap, aq, iid = TRUE, eb = FALSE, jackknife = FALSE)
+    d <- bridge_diagnostics(ap, aq, iid = TRUE, interval = FALSE, jackknife = FALSE)
     data.frame(n_ov = d$n_ov, pass = !isTRUE(d$flags[["overlap"]]),
                cover = is.finite(d$logml) && abs(d$logml) <= z975 * d$mcse,
                k_fg = pareto_khat(aq), k_gf = pareto_khat(-ap))

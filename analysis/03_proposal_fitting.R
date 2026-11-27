@@ -13,7 +13,6 @@ BO_ROOT <- local({a <- commandArgs(FALSE); f <- sub("^--file=", "", a[grep("^--f
 for (f in c("common.R", "supplement.R", "proposal_fitting.R", "paper.R")) source(file.path(BO_ROOT, "R", f))
 S <- 2000L
 G <- 20L
-invisible(jackknife_null_quantiles(G, probs = c(0.95, 1 - 0.05 / 4)))
 arms <- c("fixed at theta_0", "same draws", "split, extra sample", "split, same budget", "cross-fitted")
 rows <- list()
 targets <- data.frame(target = c("t7", "t7", "t7", "skew", "skew"), d = c(2L, 8L, 32L, 8L, 32L),
@@ -28,9 +27,8 @@ for (ti in seq_len(nrow(targets))) {
     X <- tg$r(S); Xextra <- tg$r(S); E <- matrix(stats::rnorm(S * dd), S, dd)   # common base variates
     h <- S / 2; A <- X[seq_len(h), , drop = FALSE]; B <- X[h + seq_len(h), , drop = FALSE]
     run <- function(arm, ap, aq, jk = FALSE, folds = NULL) {
-      d <- bridge_diagnostics(ap, aq, iid = TRUE, eb = FALSE, jackknife = jk, G = G, folds = folds)
-      data.frame(arm = arm, D = d$logml - tg$logZ, mcse = d$mcse, n_ov = d$n_ov,
-                 t_rej = if (jk) isTRUE(abs(d$t_T) > stats::qt(0.975, G - 1)) else NA)
+      d <- bridge_diagnostics(ap, aq, iid = TRUE, interval = FALSE, jackknife = FALSE, folds = folds)
+      data.frame(arm = arm, D = d$logml - tg$logZ, mcse = d$mcse, n_ov = d$n_ov)
     }
     a0 <- ratios(tg, X, prop_from(E, tg$m0, tg$v0), tg$m0, tg$v0)
     ms <- moments(X); a1 <- ratios(tg, X, prop_from(E, ms$m, ms$v), ms$m, ms$v)
@@ -50,7 +48,7 @@ for (ti in seq_len(nrow(targets))) {
       target = targets$target[ti], d = dd, proposal = a, R = nrow(x), sd = stats::sd(x$D), sd_se = se_sd(x$D),
       bias_in_mcse = mean(x$D) / mm, bias_se = stats::sd(x$D) / sqrt(nrow(x)) / mm,
       rmse = sqrt(mean(x$D^2)), coverage = mean(abs(x$D) <= z975 * x$mcse),
-      med_n_ov = stats::median(x$n_ov), t_T_rejections_pct = 100 * mean(x$t_rej))
+      med_n_ov = stats::median(x$n_ov))
   }
 }
 tab <- do.call(rbind, rows)
@@ -64,16 +62,15 @@ tab$sd_vs_same <- tab$sd / ave(ifelse(tab$proposal == "same draws", tab$sd, NA),
 emit_table("tab_prop", cbind(ifelse(!duplicated(paste(tab$target, tab$d)), paste(tlab[tab$target], tab$d), ""), lab[tab$proposal],
                              fvse(tab$sd, tab$sd_se, 4), fx(tab$sd_vs_fixed, 3), fx(tab$sd_vs_same, 3),
                              fsvse(tab$bias_in_mcse, tab$bias_se, 2), fx(tab$rmse, 4), fx(tab$coverage, 3),
-                             fint(tab$med_n_ov), fx(tab$t_T_rejections_pct, 1)), groups = group_ends(paste(tab$target, tab$d)),
-           spec = "llcccccccr",
-           header = "Target, $d$ & Proposal & sd & sd/fixed & sd/same & bias/MCSE & RMSE & coverage & med $\\neffhat$ & $t_\\Tp$ rej.\\ (\\%)\\\\")
+                             fint(tab$med_n_ov)), groups = group_ends(paste(tab$target, tab$d)),
+           spec = "llccccccc",
+           header = "Target, $d$ & Proposal & sd & sd/fixed & sd/same & bias/MCSE & RMSE & coverage & med $\\neffhat$\\\\")
 skew <- tab[tab$target == "skew", ]
 tab <- tab[tab$target == "t7", ]
 gv <- function(d, arm, col) tab[[col]][tab$d == d & tab$proposal == arm]
 ds <- unique(tab$d); dmax <- max(ds)
 res_put("prop.dmax", dmax)
 res_put("prop.same.absbias.dmax", fx(abs(gv(dmax, "same draws", "bias_in_mcse")), 2))
-res_put("prop.same.trej.dmax", fx(gv(dmax, "same draws", "t_T_rejections_pct"), 1))
 res_put("prop.split.infl", frange(100 * (vapply(ds, function(d) gv(d, "split, same budget", "sd") / gv(d, "same draws", "sd"), 0) - 1), 0))
 res_put("prop.cross.cost", fx(max(0, 100 * (vapply(ds, function(d) gv(d, "cross-fitted", "sd") / gv(d, "same draws", "sd"), 0) - 1)), 0))
 res_put("prop.cross.cost.fixed", frange(100 * (vapply(ds, function(d) gv(d, "cross-fitted", "sd") / gv(d, "fixed at theta_0", "sd"), 0) - 1), 0))

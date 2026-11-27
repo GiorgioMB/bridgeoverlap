@@ -2,20 +2,11 @@
 z975 <- stats::qnorm(0.975)
 lse <- function(v) { m <- max(v); m + log(sum(exp(v - m))) }
 lse2 <- function(a, b) pmax(a, b) + log1p(exp(-abs(a - b)))
-# Rejection indicators of the failure diagnostics at a nominal level (Table E2):
-# I_max with the corrected Bonferroni threshold Phi^{-1}(1 - alpha/2G)/sqrt(G - 1),
-# the naive one with sqrt(G), and the simulated pivotal quantile; G_max with the
-# Grubbs quantile; t_T with t_{G-1}; V_jack with chi^2_{G-1} / (G - 1).
+# Rejection indicator of the variance check at a nominal level: V_jack against
+# chi^2_{G-1} / (G - 1).
 rejections <- function(d, alpha = 0.05) {
   G <- d$settings$G
-  q <- jackknife_null_quantiles(G, probs = 1 - alpha)
-  zb <- stats::qnorm(1 - alpha / (2 * G))
-  c(V_jack = isTRUE(d$V_jack > stats::qchisq(1 - alpha, G - 1) / (G - 1)),
-    I_max_bonf = isTRUE(d$I_max > zb / sqrt(G - 1)),
-    I_max_naive = isTRUE(d$I_max > zb / sqrt(G)),
-    I_max_exact = isTRUE(d$I_max > q["I_max", 1]),
-    G_max = isTRUE(d$G_max > q["G_max", 1]),
-    t_T = isTRUE(abs(d$t_T) > stats::qt(1 - alpha / 2, G - 1)))
+  c(V_jack = isTRUE(d$V_jack > stats::qchisq(1 - alpha, G - 1) / (G - 1)))
 }
 # Distributions ------------------------------------------------------------------------
 lmvn_std <- function(X) -0.5 * rowSums(X^2) - ncol(X) / 2 * log(2 * pi)

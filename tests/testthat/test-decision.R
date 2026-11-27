@@ -5,9 +5,7 @@ test_that("finite-sample quantities are reported in every regime", {
   x <- rnorm(30); y <- rnorm(30, 0.1, 1.02)
   a <- function(t) dnorm(t, log = TRUE) - dnorm(t, 0.1, 1.02, log = TRUE)
   d <- bridge_diagnostics(a(x), a(y), iid = TRUE, jackknife = FALSE)
-  expect_true(all(is.finite(d$eb)))
-  expect_true(is.finite(d$NH_lower))
-  expect_true(is.na(d$accuracy_bound) || d$accuracy_bound > 0)
+  expect_true(all(is.finite(d$interval)))
 })
 
 test_that("folds: within-fold variances, fold-aware blocks and EB radii", {
@@ -29,8 +27,8 @@ test_that("folds: within-fold variances, fold-aware blocks and EB radii", {
   expect_equal(d$n_ov, n_within)
   expect_lte(d$n_ov, dp$n_ov + 1e-8)               # pooled variances include the between-fold term
   expect_equal(d$settings$K, 2L)
-  expect_true(d$eb[["lower"]] < d$logml && d$logml < d$eb[["upper"]])
-  expect_gt(d$eb[["upper"]] - d$eb[["lower"]], dp$eb[["upper"]] - dp$eb[["lower"]])  # delta / K per fold
+  expect_true(d$interval[["lower"]] < d$logml && d$logml < d$interval[["upper"]])
+  expect_gt(d$interval[["upper"]] - d$interval[["lower"]], dp$interval[["upper"]] - dp$interval[["lower"]])  # delta / K per fold
   expect_true(all(is.finite(d$jackknife$c_b)))
   expect_error(bridge_diagnostics(ap, aq, folds = list(post = rep(1:2, each = S / 2), prop = rep(2:1, each = S / 2)), iid = TRUE),
                "contiguous")
@@ -52,11 +50,11 @@ test_that("decision rule maps flags to actions", {
 test_that("Bayes factors combine two runs", {
   set.seed(7)
   a <- function(t, lz) lz + dnorm(t, log = TRUE) - dnorm(t, 0.5, 1.3, log = TRUE)
-  d1 <- bridge_diagnostics(a(rnorm(2000), 1), a(rnorm(2000, 0.5, 1.3), 1), iid = TRUE, nsim = 2e4)
-  d2 <- bridge_diagnostics(a(rnorm(2000), -0.5), a(rnorm(2000, 0.5, 1.3), -0.5), iid = TRUE, nsim = 2e4)
+  d1 <- bridge_diagnostics(a(rnorm(2000), 1), a(rnorm(2000, 0.5, 1.3), 1), iid = TRUE)
+  d2 <- bridge_diagnostics(a(rnorm(2000), -0.5), a(rnorm(2000, 0.5, 1.3), -0.5), iid = TRUE)
   bf <- bridge_bayes_factor(d1, d2)
   expect_equal(bf$log_bf, d1$logml - d2$logml)
   expect_equal(bf$mcse, sqrt(d1$mcse^2 + d2$mcse^2))
-  expect_true(bf$eb[["lower"]] <= bf$log_bf && bf$log_bf <= bf$eb[["upper"]])
+  expect_true(bf$fs_interval[["lower"]] <= bf$log_bf && bf$log_bf <= bf$fs_interval[["upper"]])
   expect_output(print(bf), "log Bayes factor")
 })

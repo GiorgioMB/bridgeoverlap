@@ -52,19 +52,18 @@ R_g <- function(tg, X, Y, E, m, v, d_obj, Xfit) {
 tab <- do.call(rbind, lapply(seq_len(nrow(cfg)), function(i) {
   dd <- cfg$d[i]; S <- cfg$S[i]
   tg <- t7_target(dd)
-  invisible(jackknife_null_quantiles(G, probs = 1 - 0.05 / 4))
   msg("E4: d =", dd, "S =", S)
   res <- run_reps(n_reps(cfg$R[i], key = "REPS$e4"), function(r) {
     X <- tg$r(S); Xextra <- tg$r(S); E <- matrix(stats::rnorm(S * dd), S, dd)
     out <- list()
     a <- ratios(tg, X, prop_from(E, tg$m0, tg$v0), tg$m0, tg$v0)
-    out$fixed <- bridge_diagnostics(a$ap, a$aq, iid = TRUE, eb = FALSE, jackknife = FALSE)
+    out$fixed <- bridge_diagnostics(a$ap, a$aq, iid = TRUE, interval = FALSE, jackknife = FALSE)
     me <- moments(Xextra); Ye <- prop_from(E, me$m, me$v)
     a <- ratios(tg, X, Ye, me$m, me$v)
-    out$split <- bridge_diagnostics(a$ap, a$aq, iid = TRUE, eb = FALSE, jackknife = FALSE)
+    out$split <- bridge_diagnostics(a$ap, a$aq, iid = TRUE, interval = FALSE, jackknife = FALSE)
     ms <- moments(X); Ys <- prop_from(E, ms$m, ms$v)
     a <- ratios(tg, X, Ys, ms$m, ms$v)
-    ds <- bridge_diagnostics(a$ap, a$aq, iid = TRUE, eb = FALSE, G = G)
+    ds <- bridge_diagnostics(a$ap, a$aq, iid = TRUE, interval = FALSE, G = G)
     block <- bridgeoverlap:::.block_ids_prop(S, G)
     jv <- jack_refit(tg, X, E, Ys, block, G) / ds$mcse^2
     rg <- if (dd < 32) R_g(tg, X, Ys, E, ms$m, ms$v, ds, X) else c(fixed = NA, pathwise = NA)

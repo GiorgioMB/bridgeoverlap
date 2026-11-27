@@ -72,9 +72,9 @@ for (i in seq_len(nrow(cfg))) {
   msg(cc$group, cc$config, "S1 =", cc$S1, "S2 =", cc$S2, "n_ov =", signif(n_ov, 3), "I =", signif(pop$I, 3), "R =", R)
   res <- run_reps(R, function(r) {
     d <- bridge_diagnostics(logZ + fam$lr(fam$rpost(cc$S1)), logZ + fam$lr(fam$rprop(cc$S2)),
-                            iid = TRUE, eb = FALSE, jackknife = FALSE)
+                            iid = TRUE, interval = FALSE, jackknife = FALSE)
     data.frame(Delta = d$logml - logZ, mcse = d$mcse, n_ov_hat = d$n_ov, I_hat = d$I, NH0 = d$NH0,
-               NH_lower = d$NH_lower, flag = d$flags[["overlap"]])
+               flag = d$flags[["overlap"]])
   }, cell = paste("univ", cc$group, cc$config, cc$S1, cc$S2))
   ok <- is.finite(res$Delta) & is.finite(res$mcse)
   res$cover <- ok & abs(res$Delta) <= z975 * res$mcse

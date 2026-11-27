@@ -9,10 +9,10 @@ test_that("bridge sampling a cmdstanr fit recovers the exact eight schools evide
   fit <- mod$sample(data = eight_schools_data(), chains = 4, iter_warmup = 500,
                     iter_sampling = 1000, refresh = 0, seed = 1, show_messages = FALSE)
   bs <- bridge_sampler_cmdstanr(fit)
-  d <- bridge_diagnostics(bs, nsim = 5000)
+  d <- bridge_diagnostics(bs)
   expect_equal(d$settings$M, 4L)
   expect_lt(abs(d$logml - eight_schools_log_evidence()), 5 * d$mcse)
-  cf <- bridge_diagnostics(bridge_sampler_cmdstanr(fit, crossfit = TRUE), G = 16, nsim = 5000)
+  cf <- bridge_diagnostics(bridge_sampler_cmdstanr(fit, crossfit = TRUE), G = 16)
   expect_equal(cf$settings$S1, 4000L)
   expect_lt(abs(cf$logml - eight_schools_log_evidence()), 5 * cf$mcse)
 })

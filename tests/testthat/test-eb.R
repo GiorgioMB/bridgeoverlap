@@ -9,8 +9,8 @@ test_that("the finite-sample interval contains the estimate, is wider than the d
   }
   expect_gte(hits, 39)
   d <- bridge_diagnostics(s$a_post, s$a_prop, iid = TRUE, jackknife = FALSE)
-  expect_true(d$eb[["lower"]] < d$logml && d$logml < d$eb[["upper"]])
-  expect_gt(d$eb[["upper"]] - d$eb[["lower"]], 2 * stats::qnorm(0.975) * d$mcse)
+  expect_true(d$interval[["lower"]] < d$logml && d$logml < d$interval[["upper"]])
+  expect_gt(d$interval[["upper"]] - d$interval[["lower"]], 2 * stats::qnorm(0.975) * d$mcse)
 })
 
 test_that("the vectorized radius solves Bennett's equation", {

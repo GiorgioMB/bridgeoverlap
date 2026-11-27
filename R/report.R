@@ -2,8 +2,8 @@
 
 #' Tabular report of the diagnostics for one run
 #'
-#' Arranges the output of [bridge_diagnostics()] as a table: each reported
-#' quantity, its value, the rule applied to it and whether the rule is met.
+#' Arranges the output of [bridge_diagnostics()] as a table: the estimate, the MCSE, the
+#' two checks with their rules, the finite-sample interval and the decision.
 #'
 #' @param x A `bridge_diagnostics` object.
 #' @param digits Significant digits.
@@ -14,32 +14,16 @@ bridge_report <- function(x, digits = 3) {
   st <- x$settings
   f <- function(v) if (is.null(v) || !is.finite(v)) "--" else format(signif(v, digits), scientific = FALSE)
   ok <- function(flag) if (is.na(flag)) "--" else if (flag) "flag" else "pass"
-  th <- x$thresholds
   rows <- list(
     c("log Z-hat", format(round(x$logml, 4), nsmall = 4), "", ""),
     c("MCSE", f(x$mcse), if (st$iid) "independent draws" else sprintf("long-run variance (%s)", st$tau_method), ""),
-    c("n_ov-hat", f(x$n_ov), if (st$iid) sprintf(">= %s", f(x$n_ov_threshold)) else "", if (st$iid) ok(x$flags[["overlap"]]) else ""),
-    c("I-hat", f(x$I), "near 1: near-perfect, report the finite-sample interval", ""),
-    c("N H0-hat", f(x$NH0), "", ""),
-    c("lower bound for N H", f(x$NH_lower), sprintf(">= %s for the accuracy bound", f(x$NH_required)), "")
+    c(if (st$iid) "overlap check: n_ov-hat" else "overlap check: n_ovP-hat", f(if (st$iid) x$n_ov else x$n_ovP),
+      sprintf(">= %s", f(st$n0)), ok(x$flags[["overlap"]])),
+    c("variance check: V_jack", f(x$V_jack), sprintf("<= %s", f(x$critical[["V_jack"]])), ok(x$flags[["variance"]])),
+    c("finite-sample interval", sprintf("[%s, %s]", f(x$interval[["lower"]]), f(x$interval[["upper"]])),
+      sprintf("level %g, any sample size", 1 - st$delta), ""),
+    c("decision", x$decision, "", "")
   )
-  if (!st$iid) {
-    rows <- c(rows, list(c("tau-hat", f(x$tau), "within chains", ""),
-                         c("n_ovP-hat", f(x$n_ovP), sprintf(">= %s", f(x$n_ov_threshold)), ok(x$flags[["overlap"]]))))
-  }
-  if (isTRUE(st$eb)) {
-    rows <- c(rows, list(c("finite-sample interval", sprintf("[%s, %s]", f(x$eb[["lower"]]), f(x$eb[["upper"]])),
-                           sprintf("level %g, any sample size", 1 - st$delta), "")))
-  }
-  if (st$iid) rows <- c(rows, list(c("accuracy bound", f(x$accuracy_bound), sprintf("level %g", 1 - 2 * st$delta), "")))
-  if (isTRUE(st$jackknife)) {
-    rows <- c(rows, list(
-      c("T (t_T)", sprintf("%s (%s)", f(x$T), f(x$t_T)), sprintf("|t_T| <= %s", f(th$t_T)), ok(x$flags[["calibration"]])),
-      c("V_jack", f(x$V_jack), sprintf("<= %s", f(th$V_jack)), ok(x$flags[["jackknife_variance"]])),
-      c("I_max", f(x$I_max), sprintf("<= %s", f(th$I_max)), ok(x$flags[["influential_block_imax"]])),
-      c("G_max", f(x$G_max), sprintf("<= %s", f(th$G_max)), ok(x$flags[["influential_block_grubbs"]]))))
-  }
-  rows <- c(rows, list(c("decision", x$decision %||% "", "", "")))
   out <- as.data.frame(do.call(rbind, rows), stringsAsFactors = FALSE)
   names(out) <- c("quantity", "value", "rule", "status")
   out
@@ -66,11 +50,11 @@ bridge_bayes_factor <- function(d1, d2, level = 0.95) {
   z <- stats::qnorm(1 - (1 - level) / 2)
   est <- d1$logml - d2$logml
   se <- sqrt(d1$mcse^2 + d2$mcse^2)
-  pass1 <- !any(d1$flags %in% TRUE) && !isTRUE(d1$stuck_chains > 0)
-  pass2 <- !any(d2$flags %in% TRUE) && !isTRUE(d2$stuck_chains > 0)
-  eb <- c(lower = d1$eb[["lower"]] - d2$eb[["upper"]], upper = d1$eb[["upper"]] - d2$eb[["lower"]])
+  pass1 <- !any(d1$flags %in% TRUE)
+  pass2 <- !any(d2$flags %in% TRUE)
+  fsi <- c(lower = d1$interval[["lower"]] - d2$interval[["upper"]], upper = d1$interval[["upper"]] - d2$interval[["lower"]])
   out <- list(log_bf = est, mcse = se, interval = c(lower = est - z * se, upper = est + z * se),
-              eb = eb, eb_level = 1 - d1$settings$delta - d2$settings$delta,
+              fs_interval = fsi, fs_level = 1 - d1$settings$delta - d2$settings$delta,
               passes = pass1 && pass2, pass = c(model1 = pass1, model2 = pass2),
               share_model1 = d1$mcse^2 / se^2, level = level,
               actions = list(model1 = d1$actions, model2 = d2$actions))
@@ -84,7 +68,7 @@ print.bridge_bayes_factor <- function(x, digits = 4, ...) {
   cat(sprintf("log Bayes factor (model 1 vs model 2): %s   MCSE %s\n", f(x$log_bf), f(x$mcse)))
   cat(sprintf("  %g%% interval [%s, %s]; model 1 contributes %s%% of the variance\n", 100 * x$level,
               f(x$interval[["lower"]]), f(x$interval[["upper"]]), format(round(100 * x$share_model1))))
-  if (all(is.finite(x$eb))) cat(sprintf("  finite-sample interval [%s, %s] (level %g)\n", f(x$eb[["lower"]]), f(x$eb[["upper"]]), x$eb_level))
+  if (all(is.finite(x$fs_interval))) cat(sprintf("  finite-sample interval [%s, %s] (level %g)\n", f(x$fs_interval[["lower"]]), f(x$fs_interval[["upper"]]), x$fs_level))
   if (x$passes) {
     cat("  Both runs pass: report the interval.\n")
   } else {

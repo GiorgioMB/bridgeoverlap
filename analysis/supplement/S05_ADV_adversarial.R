@@ -52,7 +52,7 @@ tab <- do.call(rbind, lapply(quick_pick(examples, c(1L, 3L, 5L)), function(ex) {
     msg("ADV:", ex$name, "S =", S)
     res <- run_reps(ex$R_of(S), cell = paste("adv", STREAM, ex$name, S), fun = function(r) {
       a <- ex$draw(S)
-      d <- bridge_diagnostics(a$ap, a$aq, iid = TRUE, eb = FALSE, jackknife = FALSE)
+      d <- bridge_diagnostics(a$ap, a$aq, iid = TRUE, interval = FALSE, jackknife = FALSE)
       Delta <- d$logml - logZ
       data.frame(n_ov = d$n_ov, I = d$I, z = if (is.finite(Delta)) Delta / d$mcse else Delta,
                  cover = is.finite(Delta) && isTRUE(abs(Delta) <= z975 * d$mcse),

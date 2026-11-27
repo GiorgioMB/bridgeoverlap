@@ -31,7 +31,6 @@ save_table(top, "fig2_two_state_chain")
 R <- n_reps(REPS$e9)
 G <- 20L
 alpha <- 0.05
-qa <- jackknife_null_quantiles(G, probs = 1 - alpha / 4)
 logZ <- -0.4
 fams <- list(family_F2(2), family_F2(4), family_F1(10, 1.5))   # order of Table E9
 rows <- list()

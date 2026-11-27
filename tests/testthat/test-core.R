@@ -38,7 +38,8 @@ test_that("the MCSE identity and the contraction factor hold at the root", {
     mean(1 / (s1 * exp(s$a_post) + s2 * z))
   h <- 1e-5
   dphi <- (log(Tmap(exp(ch + h))) - log(Tmap(exp(ch - h)))) / (2 * h)
-  expect_equal(d$T, dphi, tolerance = 1e-6)
+  NH <- sum(pp * (1 - pp)) + sum(pq * (1 - pq))
+  expect_equal(1 - NH / sum(pp), dphi, tolerance = 1e-6)      # T = 1 - H-hat / H0-hat
 })
 
 test_that("the two-point family gives Delta = log(n_prop / n_post) and the conventions at +-Inf", {
@@ -61,13 +62,13 @@ test_that("the two-point family gives Delta = log(n_prop / n_post) and the conve
 test_that("diagnostics are invariant to a common shift of the log ratios", {
   set.seed(4)
   s <- sim_gauss(S1 = 800)
-  d1 <- bridge_diagnostics(s$a_post, s$a_prop, iid = TRUE, nsim = 5000)
-  d2 <- bridge_diagnostics(s$a_post + 50, s$a_prop + 50, iid = TRUE, nsim = 5000)
+  d1 <- bridge_diagnostics(s$a_post, s$a_prop, iid = TRUE)
+  d2 <- bridge_diagnostics(s$a_post + 50, s$a_prop + 50, iid = TRUE)
   expect_equal(d2$logml - d1$logml, 50, tolerance = 1e-8)
-  for (k in c("mcse", "n_ov", "I", "NH0", "T", "t_T", "V_jack", "I_max", "G_max")) {
+  for (k in c("mcse", "n_ov", "I", "NH0", "V_jack")) {
     expect_equal(d2[[k]], d1[[k]], tolerance = 1e-6)
   }
-  expect_equal(unname(d2$eb - d1$eb), c(50, 50), tolerance = 1e-6)
+  expect_equal(unname(d2$interval - d1$interval), c(50, 50), tolerance = 1e-6)
 })
 
 test_that("NA log ratios are replaced with a warning", {

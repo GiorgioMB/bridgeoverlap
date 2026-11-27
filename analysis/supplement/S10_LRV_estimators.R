@@ -57,7 +57,7 @@ save_table(bottom, "tab_LRV_binned")
 fam <- fams$F2
 iid <- run_reps(n_reps(REPS$lrv_iid), function(r) {
   ap <- logZ + fam$lr(fam$rpost(1000)); aq <- logZ + fam$lr(fam$rprop(1000))
-  d <- bridge_diagnostics(ap, aq, iid = TRUE, eb = FALSE, jackknife = FALSE)
+  d <- bridge_diagnostics(ap, aq, iid = TRUE, interval = FALSE, jackknife = FALSE)
   data.frame(Delta = d$logml - logZ, mcse = d$mcse, cv_em = sqrt(error_measures_re2(ap, aq, d$logml)), var_f2 = d$V_post / 0.25)
 })
 extra <- data.frame(case = "independent draws, F2 (mu_g = 2), S = 1000", R = nrow(iid),

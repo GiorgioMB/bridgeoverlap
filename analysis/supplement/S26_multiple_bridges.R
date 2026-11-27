@@ -50,7 +50,7 @@ tab <- do.call(rbind, lapply(NN, function(n) {
     th <- unlist(lapply(mu, function(m) stats::rnorm(n, m))); lab <- rep(1:K, each = n); LQ <- lq(th)
     mb <- mbar(LQ, lab)
     i1 <- lab == 1; i5 <- lab == K                                     # two-sample bridge: "posterior" p_5, "proposal" q_1
-    d <- bridge_diagnostics(LQ[i5, K] - LQ[i5, 1], LQ[i1, K] - LQ[i1, 1], iid = TRUE, eb = FALSE, jackknife = FALSE)
+    d <- bridge_diagnostics(LQ[i5, K] - LQ[i5, 1], LQ[i1, K] - LQ[i1, 1], iid = TRUE, interval = FALSE, jackknife = FALSE)
     data.frame(mb_err = mb$est - truth, mb_cov = abs(mb$est - truth) <= z975 * mb$se, mb_na = mb$n_a, mb_NR = mb$NoverR,
                d_err = d$logml - truth, d_cov = is.finite(d$logml) && abs(d$logml - truth) <= z975 * d$mcse, d_nov = d$n_ov)
   }, cell = paste("mbar", n))

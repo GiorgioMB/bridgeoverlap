@@ -46,7 +46,7 @@ runs$cover <- is.finite(runs$error) & abs(runs$error) <= z * runs$mcse
 runs$cover_em <- is.finite(runs$error) & abs(runs$error) <= z * runs$cv_error_measures
 # Algorithm 1 with the plain rule (Section 6.1), recomputed from the stored estimated effective overlap and failure flags
 runs$flag_overlap <- !(runs$n_ovP >= 30)
-runs$pass <- !runs$flag_overlap & !(runs$flag_any_failure %in% TRUE)
+runs$pass <- !runs$flag_overlap & !(runs$flag_variance %in% TRUE)
 runs$f_ours <- !runs$pass
 runs$f_std <- runs$rhat_max > 1.01 | runs$ess_bulk_min < 400 | runs$divergent > 0
 runs$f_em <- !(runs$cv_error_measures < 0.3)
@@ -70,7 +70,7 @@ summ <- do.call(rbind, lapply(split(runs, runs$config), function(x) data.frame(
   config = x$config[1], d = NA, R = nrow(x), coverage = mean(x$cover), coverage_em = mean(x$cover_em),
   bias_mcse = mean(x$error) / stats::median(x$mcse), rmse = sqrt(mean(x$error^2)), med_mcse = stats::median(x$mcse),
   med_n_ov = stats::median(x$n_ov), med_I = stats::median(x$I), med_n_ovP = stats::median(x$n_ovP),
-  f_overlap = pct(x$flag_overlap), f_failure = pct(x$flag_any_failure), f_ours = pct(x$f_ours),
+  f_overlap = pct(x$flag_overlap), f_failure = pct(x$flag_variance), f_ours = pct(x$f_ours),
   f_std = pct(x$f_std), f_em = pct(x$f_em), f_ml = pct(x$f_ml), f_w3 = pct(x$f_w3), f_rep = pct(x$f_rep), f_cur = pct(x$f_cur),
   cov_pass_ours = covp(x$cover, x$f_ours), cov_pass_cur = covp(x$cover_em, x$f_cur),
   cov_pass_std = covp(x$cover_em, x$f_std))))

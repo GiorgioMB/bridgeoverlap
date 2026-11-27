@@ -50,8 +50,7 @@ Numbers quoted in the text come from the same scripts and from:
 `05_eight_schools.R` (eight schools with independent draws and random-walk Metropolis),
 `printout.R` (the worked example of the decision rule),
 `supplement/S05_ADV_adversarial.R` (adversarial examples),
-`supplement/S06_E2_null_calibration.R` and `S07_FA_false_alarm.R` (null calibration and
-joint false-alarm rate), `S11_E4_proposal_fitting.R` and `S12_E4c_same_draw_bias.R`
+`supplement/S06_E2_null_calibration.R` (null calibration of the variance check), `S11_E4_proposal_fitting.R` and `S12_E4c_same_draw_bias.R`
 (proposal fitting), `S18_LRV_regeneration.R` (regeneration), `S19_rerun_vs_extend.R`
 (fresh rerun or extension after an overlap flag), `S22_exact_mcse_counterexample.R` (the
 counting example of Section 6.2), `S23_collapse.R` (Section S5.1) and `S25_mcmc_interval.R` (the

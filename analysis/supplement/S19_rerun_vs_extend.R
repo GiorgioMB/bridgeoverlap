@@ -20,7 +20,7 @@ cells <- list(list(key = "f2m4", lab = "F2, $\\mu_g=4$", fam = function() family
               list(key = "f3hd", lab = "F3, $d=500$, $v=15$", fam = function() family_F3(500, 3, 15), S0 = NA))
 if (BO_QUICK) cells <- cells[1:2]
 diag1 <- function(ap, aq) {
-  d <- bridge_diagnostics(ap, aq, iid = TRUE, eb = FALSE, jackknife = FALSE)
+  d <- bridge_diagnostics(ap, aq, iid = TRUE, interval = FALSE, jackknife = FALSE)
   list(pass = !d$flags[["overlap"]], cover = is.finite(d$logml) && abs(d$logml - logZ) <= z * d$mcse,
        factor = if (is.finite(d$draws_factor)) d$draws_factor else 2)
 }

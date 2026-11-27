@@ -17,7 +17,7 @@ tab <- do.call(rbind, lapply(seq_len(nrow(cfg)), function(i) {
   res <- run_reps(n_reps(cfg$R[i], key = "REPS$e4c"), function(r) {
     X <- tg$r(S); ms <- moments(X)
     a <- ratios(tg, X, prop_from(matrix(stats::rnorm(S * dd), S, dd), ms$m, ms$v), ms$m, ms$v)
-    d <- bridge_diagnostics(a$ap, a$aq, iid = TRUE, eb = FALSE, jackknife = FALSE)
+    d <- bridge_diagnostics(a$ap, a$aq, iid = TRUE, interval = FALSE, jackknife = FALSE)
     data.frame(D = d$logml - tg$logZ, mcse = d$mcse, n_ov = d$n_ov, I = d$I)
   })
   b <- mean(res$D) / stats::median(res$mcse)

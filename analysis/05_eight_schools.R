@@ -13,7 +13,6 @@ source(file.path(BO_ROOT, "R", "common.R"))
 source(file.path(BO_ROOT, "R", "eight_schools.R"))
 source(file.path(BO_ROOT, "R", "paper.R"))
 suppressPackageStartupMessages(library(bridgesampling))
-qa <- jackknife_null_quantiles(20L, probs = 1 - 0.05 / 4)
 z <- stats::qnorm(0.975)
 ## Top: exact draws -----------------------------------------------------------------
 cfg <- data.frame(param = c("centred", "centred", "centred", "non-centred", "non-centred"),
@@ -32,13 +31,13 @@ top <- do.call(rbind, lapply(seq_len(nrow(cfg)), function(i) {
     bs <- bridge_sampler(X, log_posterior = lp, data = NULL, lb = b$lb, ub = b$ub,
                          use_neff = FALSE, silent = TRUE)
     d <- bridge_diagnostics(bs, iid = TRUE)
-    data.frame(err = d$logml - es$logZ, mcse = d$mcse, n_ov = d$n_ov, I = d$I, NH0 = d$NH0, T = d$T,
-               t_T = d$t_T, V_jack = d$V_jack, I_max = d$I_max, G_max = d$G_max,
-               eb_lo = d$eb[["lower"]] - es$logZ, eb_hi = d$eb[["upper"]] - es$logZ,
+    data.frame(err = d$logml - es$logZ, mcse = d$mcse, n_ov = d$n_ov, I = d$I, NH0 = d$NH0,
+               V_jack = d$V_jack,
+               eb_lo = d$interval[["lower"]] - es$logZ, eb_hi = d$interval[["upper"]] - es$logZ,
                f_overlap = d$flags[["overlap"]], f_any = any(d$flags[-1L] %in% TRUE),
                n_flags = sum(d$flags %in% TRUE),
-               eb_cover = d$eb[["lower"]] <= es$logZ && es$logZ <= d$eb[["upper"]],
-               eb_width = (d$eb[["upper"]] - d$eb[["lower"]]) / (2 * z * d$mcse))
+               eb_cover = d$interval[["lower"]] <= es$logZ && es$logZ <= d$interval[["upper"]],
+               eb_width = (d$interval[["upper"]] - d$interval[["lower"]]) / (2 * z * d$mcse))
   })
   exact_runs[[paste(cc$param, cc$S)]] <<- res
   data.frame(parameterization = cc$param, draws = "exact", S = cc$S, R = nrow(res),
@@ -78,7 +77,7 @@ es_arm <- function(X, arm) {
     ap <- c(lr_(B, fA), lr_(A, fB)); aq <- c(lr_(es_gdraw(h, fA), fA), lr_(es_gdraw(h, fB), fB))
     folds <- list(post = rep(1:2, each = h), prop = rep(1:2, each = h))
   }
-  d <- bridge_diagnostics(ap, aq, iid = TRUE, folds = folds, eb = FALSE, jackknife = FALSE)
+  d <- bridge_diagnostics(ap, aq, iid = TRUE, folds = folds, interval = FALSE, jackknife = FALSE)
   data.frame(arm = arm, err = d$logml - es$logZ, mcse = d$mcse, n_ov = d$n_ov, I = d$I)
 }
 diag_S <- quick_pick(c(2000L, 8000L, 32000L), c(1L, 2L))
@@ -141,8 +140,7 @@ for (S in quick_pick(c(8000L, 32000L), 1L)) {
                   function(tm) {
       d <- bridge_diagnostics(bs, chains = chains, tau_method = tm, jackknife = tm == "within")
       data.frame(err = d$logml - es$logZ, tau = d$tau, mcse = d$mcse, n_ovP = d$n_ovP,
-                 flag = d$flags[["overlap"]], f_cal = d$flags[["calibration"]],
-                 f_gmax = d$flags[["influential_block_grubbs"]], stuck = isTRUE(d$stuck_chains > 0))
+                 flag = d$flags[["overlap"]], f_var = d$flags[["variance"]])
     })
     cbind(estimator = names(out), do.call(rbind, out), acceptance = rw$acceptance, rhat = rhat, ess = ess)
   })
@@ -154,8 +152,7 @@ for (S in quick_pick(c(8000L, 32000L), 1L)) {
       med_mcse = stats::median(x$mcse), med_n_ovP = stats::median(x$n_ovP),
       flag_pct = 100 * mean(x$flag), coverage = mean(abs(x$err) <= z * x$mcse),
       pct_error_gt_1 = 100 * mean(abs(x$err) > 1), mean_acceptance = mean(x$acceptance),
-      calibration_flag_pct = if (est == "within") 100 * mean(x$f_cal, na.rm = TRUE) else NA,
-      G_max_flag_pct = if (est == "within") 100 * mean(x$f_gmax, na.rm = TRUE) else NA,
+      variance_flag_pct = if (est == "within") 100 * mean(x$f_var, na.rm = TRUE) else NA,
       std_pass_pct = 100 * mean(x$rhat < 1.01 & x$ess > 400))
   }
 }
@@ -163,7 +160,7 @@ for (S in quick_pick(c(8000L, 32000L), 1L)) {
 # and by the estimated effective overlap (within-chain tau), pooled over S.
 w_all <- do.call(rbind, lapply(names(rwm_runs), function(S) cbind(S = as.integer(S), rwm_runs[[S]][rwm_runs[[S]]$estimator == "within", ])))
 std_ok <- w_all$rhat < 1.01 & w_all$ess > 400
-ours_ok <- !w_all$flag & !(w_all$f_cal %in% TRUE) & !(w_all$f_gmax %in% TRUE) & !w_all$stuck
+ours_ok <- !w_all$flag & !(w_all$f_var %in% TRUE)
 cov_ <- function(i) if (any(i)) sprintf("%s (%d)", fx(mean(abs(w_all$err[i]) <= z * w_all$mcse[i]), 2), sum(i)) else "-- (0)"
 rwm2x2 <- data.frame(standard = c("pass", "pass", "fail", "fail"), ours = c("pass", "flag", "pass", "flag"),
                      coverage = c(cov_(std_ok & ours_ok), cov_(std_ok & !ours_ok), cov_(!std_ok & ours_ok), cov_(!std_ok & !ours_ok)))
@@ -201,7 +198,6 @@ res_put("es.rwm.acc", fx(mean(unlist(lapply(rwm_runs, function(x) x$acceptance[x
 for (S in names(rwm_runs)) {
   x <- rwm_runs[[S]]; w <- x[x$estimator == "within", ]
   res_put(sprintf("es.rwm.n1.%s", S), fint(sum(abs(w$err) > 1)))
-  res_put(sprintf("es.rwm.stuck.%s", S), fx(100 * mean(w$stuck), 0))
   for (est in names(est_lab)) {
     bb <- bottom[bottom$S == as.numeric(S) & bottom$estimator == est, ]
     key <- c(within = "within", concatenated = "concat", "AR, concatenated" = "ar")[[est]]
@@ -210,7 +206,5 @@ for (S in names(rwm_runs)) {
     res_put(sprintf("es.rwm.cov.%s.%s", key, S), fx(100 * bb$coverage, 0))
   }
   bw <- bottom[bottom$S == as.numeric(S) & bottom$estimator == "within", ]
-  res_put(sprintf("es.rwm.cal.%s", S), fx(bw$calibration_flag_pct, 0))
-  res_put(sprintf("es.rwm.gmax.%s", S), fx(bw$G_max_flag_pct, 0))
 }
 res_write("05_eight_schools.R")

@@ -39,20 +39,15 @@ settings <- unlist(settings, recursive = FALSE)
 if (BO_QUICK) settings <- settings[c(2, 8)]
 tab <- do.call(rbind, lapply(settings, function(st) {
   msg("E2:", st$name, "S =", st$S, "G =", st$G)
-  invisible(jackknife_null_quantiles(st$G, probs = 0.95))
   res <- run_reps(R, function(r) {
     a <- st$draw(st$S)
-    d <- bridge_diagnostics(a$ap, a$aq, iid = TRUE, G = st$G, eb = FALSE)
+    d <- bridge_diagnostics(a$ap, a$aq, iid = TRUE, G = st$G, interval = FALSE)
     rj <- rejections(d)
-    data.frame(n_ov = d$n_ov, Delta = d$logml - logZ, mcse = d$mcse, V_jack = d$V_jack, V_jack_rej = rj[["V_jack"]],
-               I_max_bonf = rj[["I_max_bonf"]], I_max_naive = rj[["I_max_naive"]], I_max_exact = rj[["I_max_exact"]],
-               G_max = rj[["G_max"]], t_T = rj[["t_T"]])
+    data.frame(n_ov = d$n_ov, Delta = d$logml - logZ, mcse = d$mcse, V_jack = d$V_jack, V_jack_rej = rj[["V_jack"]])
   })
   data.frame(setting = st$name, S = st$S, G = st$G, R = nrow(res), med_n_ov = stats::median(res$n_ov),
              var_over_mcse2 = stats::var(res$Delta) / mean(res$mcse^2), mean_V_jack = mean(res$V_jack),
-             V_jack = 100 * mean(res$V_jack_rej), I_max_bonf = 100 * mean(res$I_max_bonf),
-             I_max_naive = 100 * mean(res$I_max_naive), I_max_exact = 100 * mean(res$I_max_exact),
-             G_max = 100 * mean(res$G_max), t_T = 100 * mean(res$t_T),
+             V_jack = 100 * mean(res$V_jack_rej),
              coverage = mean(abs(res$Delta) <= z975 * res$mcse))
 }))
 save_table(tab, "tab_E2")
@@ -61,12 +56,7 @@ lab <- c("N(0,I_5), fixed g" = "$\\mathcal N(0,I_5)$, fixed $g$", "N(0,I_16), sp
          "t_3(0,I_8), split" = "$t_3(0,I_{8})$, split", "t_3(0,I_32), split" = "$t_3(0,I_{32})$, split",
          "t_3(0,I_64), split" = "$t_3(0,I_{64})$, split", "mixture (+-3.5 e1), d = 8, split" = "mixture ($\\pm3.5e_1$), $d=8$, split",
          "N(0,I_64), split" = "$\\mathcal N(0,I_{64})$, split")
-fixed <- tab$setting == "N(0,I_5), fixed g"
-res_put("e2.s1.bonf", frange(c(tab$I_max_bonf[fixed], tab$I_max_exact[fixed]), 1)); res_put("e2.s1.naive", frange(tab$I_max_naive[fixed], 1))
-hd <- tab$setting %in% c("t_3(0,I_64), split", "N(0,I_64), split")
-res_put("e2.hd", fx(max(c(tab$I_max_exact[hd], tab$G_max[hd])), 0)); res_put("e2.hd.naive", fx(max(tab$I_max_naive[hd]), 0))
 res_put("e2.var", frange(tab$var_over_mcse2, 2))
-rates <- c(tab$V_jack, tab$I_max_exact, tab$G_max, tab$t_T)          # the four failure tests, each at nominal 5%
-res_put("e2.rej.lo", fx(min(rates), 1)); res_put("e2.rej.hi", fx(max(rates), 1))
+res_put("e2.rej.lo", fx(min(tab$V_jack), 1)); res_put("e2.rej.hi", fx(max(tab$V_jack), 1))   # variance check at nominal 5%
 res_put("e2.nov16", fint(tab$med_n_ov[tab$setting == "N(0,I_16), split"]))
 res_write("supplement/S06_E2_null_calibration.R")

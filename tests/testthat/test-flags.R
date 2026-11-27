@@ -4,7 +4,7 @@ test_that("poor overlap is flagged with a rerun factor, good overlap passes", {
   set.seed(6)
   bad <- bridge_diagnostics(a(rnorm(60), 6), a(rnorm(60, 6), 6), iid = TRUE, jackknife = FALSE)
   expect_true(bad$flags[["overlap"]])
-  expect_identical(bad$regime, "poor overlap")
+  expect_match(paste(bad$actions, collapse = " "), "poor overlap|do not overlap")
   if (is.finite(bad$draws_factor)) expect_gte(bad$draws_factor, 1)
   set.seed(7)
   good <- bridge_diagnostics(a(rnorm(4000), 0.5, 1.3), a(rnorm(4000, 0.5, 1.3), 0.5, 1.3), iid = TRUE, jackknife = FALSE)

@@ -21,6 +21,6 @@ Family & $\rho$ & $\tau_W$ & $1$ & $2$ & $4$ & $8$ & $20$ & $80$ & $1$ & $2$ & $
     header = r"---[Family & $\rho$ & $\tau_W$ & $\neffP$ & $S$ & oracle & Geyer & AR & \texttt{error\_measures} & med $\neffPhat$ (Geyer) & med $\neffPhat$ (AR)\\]---"),
   tab_prop = list(spec = r"---[rlccccrr]---",
     header = r"---[$d$ & proposal & sd of $\log\Zhat$ & bias/MCSE & RMSE & coverage & med $\neffhat$ & $t_\Tp$ rejections\\]---"),
-  tab_E5 = list(spec = r"---[lrccccccccc]---",
-    header = r"---[Scenario & med $\neffhat$ & bias/MCSE & Var/MCSE$^2$ & coverage & mean $\Vjack$ & $\Vjack$ & $\Imax$ & $\Gr$ & $t_\Tp$\\]---")
+  tab_E5 = list(spec = r"---[lrccccc]---",
+    header = r"---[Scenario & med $\neffhat$ & bias/MCSE & Var/MCSE$^2$ & coverage & mean $\Vjack$ & variance check (\%)\\]---"),
 )

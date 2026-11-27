@@ -12,8 +12,7 @@ separates posterior draws from proposal draws. Its estimating function is a
 sum of bounded terms, so its accuracy and the accuracy of its Monte Carlo
 standard error are governed by the \emph{overlap} of the two samples rather than
 by moments of the importance ratios. This package reports the estimate, its MCSE, the effective-overlap check, a
-finite-sample interval, a calibration test for sampler failure and
-delete-a-group jackknife diagnostics, all computed from quantities that
+finite-sample interval, the overlap check and a jackknife variance check, all computed from quantities that
 \code{\link[bridgesampling:bridge_sampler]{bridgesampling::bridge_sampler()}} already produces.
 }
 \details{
