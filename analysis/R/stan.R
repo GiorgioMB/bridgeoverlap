@@ -72,7 +72,7 @@ stan_summary_row <- function(bs, logZ_true, G = 20L, fit = NULL, warp3 = NULL, t
 summarise_stan <- function(df, by) {
   z <- stats::qnorm(0.975)
   cov_of <- function(err, se) mean(abs(err) <= z * se, na.rm = TRUE)
-  gate <- function(x, n) mean(n < 30, na.rm = TRUE)                    # plain rule (Section 6.1)
+  flag_rate <- function(x, n) mean(n < 30, na.rm = TRUE)               # share of runs the overlap check flags
   out <- lapply(split(df, df[by], drop = TRUE), function(x) {
     data.frame(
       x[1L, by, drop = FALSE], R = nrow(x),
@@ -86,8 +86,8 @@ summarise_stan <- function(df, by) {
       med_tau = stats::median(x$tau), med_tau_concat_geyer = stats::median(x$tau_concat_geyer),
       med_tau_concat_ar = stats::median(x$tau_concat_ar), med_n_ovP = stats::median(x$n_ovP),
       flag_overlap = mean(!(x$n_ovP >= 30)),
-      flag_overlap_concat_geyer = gate(x, x$n_ovP_concat_geyer),
-      flag_overlap_concat_ar = gate(x, x$n_ovP_concat_ar),
+      flag_overlap_concat_geyer = flag_rate(x, x$n_ovP_concat_geyer),
+      flag_overlap_concat_ar = flag_rate(x, x$n_ovP_concat_ar),
       flag_any_failure = mean(x$flag_any_failure, na.rm = TRUE),
       flag_calibration = mean(x$flag_calibration, na.rm = TRUE),
       flag_jackknife_variance = mean(x$flag_jackknife_variance, na.rm = TRUE),

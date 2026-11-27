@@ -7,5 +7,6 @@ standard errors for the optimal bridge sampling estimator*.
   finite-sample interval and accuracy bound, calibration test, jackknife diagnostics
   and the decision rule (Algorithm 1 of the paper).
 * `bridge_crossfit()`: two-fold cross-fitted bridge sampling (Algorithm S1).
-* `bridge_fs_interval()`, `bridge_report()`, `bridge_bayes_factor()`,
+* `bridge_fs_interval()` (independent draws) and `bridge_fs_interval_mcmc()` (Markov chain
+  output with a known lower bound on the spectral gap), `bridge_report()`, `bridge_bayes_factor()`,
   `bridge_sampler_cmdstanr()` and helpers.

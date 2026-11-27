@@ -38,8 +38,7 @@ top <- do.call(rbind, lapply(seq_len(nrow(cfg)), function(i) {
                f_overlap = d$flags[["overlap"]], f_any = any(d$flags[-1L] %in% TRUE),
                n_flags = sum(d$flags %in% TRUE),
                eb_cover = d$eb[["lower"]] <= es$logZ && es$logZ <= d$eb[["upper"]],
-               eb_width = (d$eb[["upper"]] - d$eb[["lower"]]) / (2 * z * d$mcse),
-               flag_gate = if (d$I <= 0.5) d$n_ov < 10 else d$NH_lower < 16 * log(40))
+               eb_width = (d$eb[["upper"]] - d$eb[["lower"]]) / (2 * z * d$mcse))
   })
   exact_runs[[paste(cc$param, cc$S)]] <<- res
   data.frame(parameterization = cc$param, draws = "exact", S = cc$S, R = nrow(res),

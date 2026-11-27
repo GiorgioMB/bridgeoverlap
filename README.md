@@ -17,7 +17,8 @@ computes:
 * the estimated effective overlap `n_ov` (and `n_ovP` = `n_ov / tau` for MCMC output),
   and the **overlap check** `n_ov >= 10` (`n_ovP >= 30` for MCMC);
 * a finite-sample confidence interval, valid at every sample size for independent draws
-  (Bennett's inequality applied to the estimating function);
+  (Bennett's inequality applied to the estimating function), and one for Markov chain
+  output that needs a lower bound on the spectral gap but no thinning;
 * a calibration test for sampler failure and delete-a-group jackknife diagnostics for
   misestimated autocorrelation and dominating blocks;
 * a decision rule that maps every flag to an action.
@@ -43,6 +44,7 @@ bridge_report(d)                   # the same as a table
 # from log ratios log{f/g} of posterior and proposal draws
 d <- bridge_diagnostics(a_post, a_prop, chains = 4, iid = FALSE)
 bridge_fs_interval(a_post, a_prop)  # finite-sample interval (independent draws)
+bridge_fs_interval_mcmc(a_post, a_prop, gamma = 0.05)  # MCMC output, spectral gap >= 0.05
 
 # Bayes factor from two independent runs
 bridge_bayes_factor(d1, d2)

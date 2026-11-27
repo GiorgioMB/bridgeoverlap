@@ -8,6 +8,9 @@
 # cell_seed(cell) + r (see R/common.R), so a rerun reproduces the same numbers.
 REPS <- list(
   collapse_ms     = 1000000L, # S23: multi-scale example of Remark S-multiscale, per value of kappa
+  khat            = 1000L,    # S24: Pareto k-hat against the overlap check, per configuration and sample size
+  mcfs            = 500L,     # S25: finite-sample interval for Markov chain output, per chain and sample size
+  mbar            = 2000L,    # S26: multiple bridge sampling, per number of draws per distribution
     # S20: laws Q searched, replications per law, re-evaluation of the worst laws
   # (independent draws)
   univ            = 4000L,  # F1-F3 universality grid

@@ -1,12 +1,11 @@
 #!/usr/bin/env Rscript
-# / Figure 1 and Supplement Tables E6, HD, UNBAL, OC: universality of the
-# effective overlap with independent draws, and its limits.
+# Figure 1: universality of the effective overlap with independent draws, and its limits.
 #   base       F1-F3;
 #   hd         d = 100, 500 with I << 0.1 (radial families: exact sampling of |theta|^2);
 #   unbal      F2 (mu_g = 4) with S1 != S2 (unbalanced allocations);
 #   threshold  cells with n_ov ~ 9 and many replications: per-run operating
 #              characteristics of the estimated effective overlap (pass rate, coverage of passing and
-#              of flagged runs) under the continuous and the gated rule.
+#              of flagged runs) under the overlap check of Algorithm 1.
 # Per-run records are saved to results/runs_univ.rds for the pooled conditional
 # coverage curves of supplement/S98_operating_characteristics.R.
 BO_ROOT <- local({a <- commandArgs(FALSE); f <- sub("^--file=", "", a[grep("^--file=", a)])
@@ -62,7 +61,6 @@ rkey <- c(base = "univ", hd = "univ_hd", unbal = "univ_unbal", threshold = "univ
 cfg$R <- unlist(REPS[rkey[cfg$group]])
 if (BO_QUICK) cfg <- cfg[c(1, 5, 14, 30, 34, 50, 52, 56, 57), ]
 cfg <- cfg[!is.na(cfg$S1), ]
-gate_NH <- 16 * log(2 / 0.05)
 runs <- list(); rows <- list()
 for (i in seq_len(nrow(cfg))) {
   cc <- cfg[i, ]
@@ -74,17 +72,15 @@ for (i in seq_len(nrow(cfg))) {
   msg(cc$group, cc$config, "S1 =", cc$S1, "S2 =", cc$S2, "n_ov =", signif(n_ov, 3), "I =", signif(pop$I, 3), "R =", R)
   res <- run_reps(R, function(r) {
     d <- bridge_diagnostics(logZ + fam$lr(fam$rpost(cc$S1)), logZ + fam$lr(fam$rprop(cc$S2)),
-                            iid = TRUE, eb = FALSE, jackknife = FALSE)   # flag_cont: the continuous rule
+                            iid = TRUE, eb = FALSE, jackknife = FALSE)
     data.frame(Delta = d$logml - logZ, mcse = d$mcse, n_ov_hat = d$n_ov, I_hat = d$I, NH0 = d$NH0,
-               NH_lower = d$NH_lower, flag_cont = d$flags[["overlap"]])
+               NH_lower = d$NH_lower, flag = d$flags[["overlap"]])
   }, cell = paste("univ", cc$group, cc$config, cc$S1, cc$S2))
   ok <- is.finite(res$Delta) & is.finite(res$mcse)
   res$cover <- ok & abs(res$Delta) <= z975 * res$mcse
-  res$flag_gate <- ifelse(res$I_hat <= 0.5, !(res$n_ov_hat >= 10), res$NH_lower < gate_NH)
-  res$flag_plain <- !((res$n_ov_hat >= 10) %in% TRUE)   # the rule of Algorithm 1: pass rates below
   runs[[i]] <- cbind(group = cc$group, config = cc$config, family = fam$id, d = fam$d, S1 = cc$S1, S2 = cc$S2,
                      n_ov = n_ov, I = pop$I, res)
-  pass <- !res$flag_plain
+  pass <- !res$flag                                       # the overlap check of Algorithm 1
   rows[[i]] <- data.frame(
     group = cc$group, family = fam$id, config = cc$config, d = fam$d, S1 = cc$S1, S2 = cc$S2, H = pop$H,
     n_ov = n_ov, I = pop$I, R = nrow(res), coverage = mean(res$cover),
@@ -94,7 +90,6 @@ for (i in seq_len(nrow(cfg))) {
     med_n_ov_ratio = stats::median(res$n_ov_hat) / n_ov, med_I_hat = stats::median(res$I_hat),
     pass_rate = mean(pass), cov_pass = if (any(pass)) mean(res$cover[pass]) else NA,
     cov_flag = if (any(!pass)) mean(res$cover[!pass]) else NA,
-    pass_rate_gate = mean(!res$flag_gate), disagree = mean(res$flag_gate != res$flag_cont),
     I_hat_above = mean(res$I_hat > 0.5))
 }
 tab <- do.call(rbind, rows)

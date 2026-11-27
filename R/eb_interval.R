@@ -67,8 +67,9 @@
   }
   out
 }
-.fs_interval <- function(a_post, a_prop, lr, chat, delta, ngrid = 150L, fold_post = NULL, fold_prop = NULL) {
-  F <- function(cc) .fs_F(cc, a_post, a_prop, lr, delta, fold_post, fold_prop)
+# Smallest closed interval containing {c : F(c) <= 0}, scanning from far outside the
+# range of the log ratios towards chat (F(chat) < 0 since W(chat) = 0).
+.hull_interval <- function(F, chat, a_post, a_prop, lr, ngrid) {
   fin <- c(a_post[is.finite(a_post)], a_prop[is.finite(a_prop)])
   B <- log(length(a_post) + length(a_prop)) + 40
   side <- function(far) {
@@ -80,6 +81,76 @@
     stats::uniroot(F, c(grid[k - 1L], grid[k]), tol = 1e-10)$root
   }
   c(lower = side(min(fin) + lr - B), upper = side(max(fin) + lr + B))
+}
+.fs_interval <- function(a_post, a_prop, lr, chat, delta, ngrid = 150L, fold_post = NULL, fold_prop = NULL) {
+  .hull_interval(function(cc) .fs_F(cc, a_post, a_prop, lr, delta, fold_post, fold_prop), chat, a_post, a_prop, lr, ngrid)
+}
+
+# Finite-sample interval for Markov chain output (Proposition S-fsmcmc) --------
+#
+# For stationary reversible chains whose right spectral gap is at least gamma, write
+# W(log Z) = U - V, with U the centred proposal sum and V the centred chain sum. U is
+# sub-gamma with variance factor N2 Var_g(pi*) and scale 1/3, V with variance factor
+# c0 N1 Var_p(pi*) and scale 1 / gamma (Lemma S-lazy, b(gamma) <= 1 / gamma), where
+# c0 = (2 - gamma) / gamma. The two variances are bounded from the responsibilities with
+# probability 1 - 3 eps, eps = 0.05 delta:
+#   N2 Var_g  <= min(A2, B): A2 empirical Bernstein (Maurer-Pontil, Thm 10);
+#   N1 Var_p  <= min(A1, B): A1 from a chain-Bernstein lower tail for the sum of squared
+#                deviations of the posterior responsibilities from a0 = M2 / N1, which is
+#                computed from the proposal draws and so independent of the chain;
+#                B from the overlap counts.
+# u(m; a, b, L) is the largest x with x <= m + sqrt(2 a x L) + b L. With probability
+# 1 - d_W, d_W = 0.85 delta, |W(log Z)| <= rho(c) = sqrt(2 v(c) L_W) + L_W / gamma,
+# v = min(A2, B) + c0 min(A1, B), L_W = log(2 / d_W). The interval is the hull of
+# {c : |W(c)| <= rho(c)}.
+.fs_F_mcmc <- function(c, a_post, a_prop, lr, delta, gamma) {
+  c0 <- (2 - gamma) / gamma; b <- 1 / gamma; S1 <- length(a_post); S2 <- length(a_prop)
+  LW <- log(2 / (0.85 * delta)); eps <- 0.05 * delta; l1 <- log(1 / eps); l2 <- log(2 / eps)
+  u <- function(m, a, bb, L) ((sqrt(2 * a * L) + sqrt(2 * a * L + 4 * m + 4 * bb * L)) / 2)^2
+  out <- numeric(length(c))
+  for (s in split(seq_along(c), ceiling(seq_along(c) / 50))) {
+    P <- 1 / (1 + exp(outer(lr + a_post, c[s], `-`)))                      # responsibilities of the posterior draws
+    Pq <- 1 / (1 + exp(outer(lr + a_prop, c[s], `-`)))                     # responsibilities of the proposal draws
+    M1 <- colSums(P); M2 <- S2 - colSums(Pq); W <- M2 - M1
+    B <- pmin(u(M2, 1, 0, l2), u(M1, c0, b, l2))                           # N H, from either overlap count
+    V2 <- (colSums(Pq^2) - colSums(Pq)^2 / S2) / (S2 - 1)
+    A2 <- S2 * (sqrt(pmax(V2, 0)) + sqrt(2 * l1 / (S2 - 1)))^2
+    a0 <- pmin(pmax(M2 / S1, 0), 1)                                        # E_p pi estimated from the proposal draws:
+    Q <- pmax(colSums(P^2) - 2 * a0 * M1 + S1 * a0^2, 0)                   # independent of the chain, so sum_j (pi_j - a0)^2
+    mq <- pmax(a0, 1 - a0)^2                                               # (pi - a0)^2 <= mq, so its variance is <= mq E(.)
+    A1 <- u(Q, c0 * mq, b * mq, l1)                                        # bounds N1 E_p (pi - a0)^2 >= N1 Var_p(pi)
+    v <- pmin(A2, B) + c0 * pmin(A1, B)
+    out[s] <- abs(W) - (sqrt(2 * v * LW) + LW / gamma)
+  }
+  out
+}
+
+#' Finite-sample confidence interval for log Z from Markov chain output
+#'
+#' For posterior draws from one or several independent, stationary, reversible Markov
+#' chains whose spectral gap is at least `gamma`, inverts a Bernstein inequality for the
+#' estimating function with a variance bound computed from the responsibilities. The
+#' interval covers \eqn{\log Z} with probability at least \eqn{1-\delta} for every number
+#' of draws, without thinning. It is valid for every chain whose spectral gap is at least
+#' `gamma`, so a smaller `gamma` gives a wider interval that is still valid. With
+#' `gamma = 1` it is a more conservative alternative to [bridge_fs_interval()].
+#'
+#' @inheritParams bridge_logml
+#' @param gamma Lower bound on the spectral gap of the posterior sampler, in (0, 1].
+#' @param delta Error probability.
+#' @param ngrid Number of grid points used to bracket the end points before they are
+#'   refined by root finding.
+#' @return Named numeric vector with elements `lower` and `upper`.
+#' @export
+bridge_fs_interval_mcmc <- function(a_post, a_prop, gamma, delta = 0.05, ngrid = 150L) {
+  .check_scalar(delta, "delta", 0, 1)
+  if (!is.numeric(gamma) || length(gamma) != 1L || !is.finite(gamma) || gamma <= 0 || gamma > 1)
+    stop("`gamma` must be a number in (0, 1].", call. = FALSE)
+  a_post <- .clean_log_ratios(a_post, "posterior"); a_prop <- .clean_log_ratios(a_prop, "proposal")
+  lr <- log(length(a_post) / length(a_prop))
+  chat <- .bridge_root(a_post, a_prop, lr)$c
+  if (!is.finite(chat)) return(c(lower = -Inf, upper = Inf))
+  .hull_interval(function(cc) .fs_F_mcmc(cc, a_post, a_prop, lr, delta, gamma), chat, a_post, a_prop, lr, ngrid)
 }
 
 #' Sharper finite-sample confidence interval for log Z (independent or cross-fitted draws)

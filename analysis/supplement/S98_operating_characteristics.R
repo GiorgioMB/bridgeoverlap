@@ -1,11 +1,10 @@
 #!/usr/bin/env Rscript
-# / Figure 3 and Supplement Table OC-pooled: operating characteristics of the
-# estimated effective overlap per run. From the per-run records of 01_universality.R (all groups),
-# S05_ADV_adversarial.R and 05_eight_schools.R (exact draws), the script computes the
-# pooled conditional coverage P(cover | the run passes at threshold c), where a run passes
-# at c if n_ov-hat >= c * min(1, 2 (1 - I-hat)) (continuous rule) or, for the gated rule,
-# if n_ov-hat >= c when I-hat <= 1/2; and the coverage binned by n_ov-hat. Pooled values
-# depend on the mix of configurations pooled and are reported per source.
+# Supplement Figure S-conditional: operating characteristics of the estimated effective overlap
+# per run. From the per-run records of 01_universality.R (all groups), S05_ADV_adversarial.R and
+# 05_eight_schools.R (independent draws), the script computes the pooled conditional coverage
+# P(cover | the run passes at threshold c), where a run passes at c if n_ov-hat >= c (the overlap
+# check of Algorithm 1), and the coverage binned by n_ov-hat. Pooled values depend on the mix of
+# configurations pooled and are reported per source.
 BO_ROOT <- local({a <- commandArgs(FALSE); f <- sub("^--file=", "", a[grep("^--file=", a)])
   if (length(f)) dirname(dirname(normalizePath(f))) else if (dir.exists("analysis")) "analysis" else ".."})
 for (f in c("common.R", "paper.R")) source(file.path(BO_ROOT, "R", f))

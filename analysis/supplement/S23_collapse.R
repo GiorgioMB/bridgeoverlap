@@ -1,5 +1,5 @@
 #!/usr/bin/env Rscript
-# Supplement Section S5.1 (Table S-collapse): why coverage under MCMC is a function of n^P_ov.
+# Supplement Section S5.1 (Figure S-collapse): why coverage under MCMC is a function of n^P_ov.
 #  (i)  The two-state chain of Theorem S-mcmc-sharp in the small-overlap limit of
 #       Proposition S-collapse, computed without Monte Carlo error: the posterior count is
 #       compound Poisson with geometric sojourns, the proposal count Poisson, and both laws are
@@ -42,19 +42,16 @@ limit_model <- function(nP, gam) {                     # lambda = 2 n^P_ov, sigm
   p_post <- pmf_fft(function(z) exp(lam * (G(z) - 1)), M)
   cov_and_D(p_post, stats::ppois(0:(ceiling(M * exp(5 * sig)) + 10), mu), stats::dpois(0, mu), sig)
 }
-NPS <- if (BO_QUICK) c(2, 16) else c(1, 2, 4, 8, 16, 32)
+NPS <- if (BO_QUICK) c(2, 16) else c(1, 2, 4, 8, 16, 32)           # values quoted in the text
 GF <- if (BO_QUICK) c(1, 0.5, 0.05, 0) else c(1, 0.9, 0.8, 0.7, 0.6, 0.5, 0.4, 0.3, 0.2, 0.1, 0.05, 0.02, 0.01, 0)
-SHOW <- c(1, 0.5, 0.2, 0.05, 0)
 lim <- lapply(NPS, function(nP) { r <- t(vapply(GF, function(g) limit_model(nP, g), c(cov = 0, D = 0))); rownames(r) <- GF; r })
 names(lim) <- NPS
-rows <- vapply(seq_along(NPS), function(i) {
-  r <- lim[[i]]; nP <- NPS[i]; show <- vapply(SHOW, function(g) { j <- match(g, GF); if (is.na(j)) NA_real_ else r[j, "cov"] }, 0)
-  paste(c(nP, fx(show, 3), fx(max(r[, "cov"]) - min(r[, "cov"]), 3), frange(sqrt(nP) * r[, "D"], 2)), collapse = " & ")
-}, "")
-writeLines(c("\\begin{tabular}{@{}rcccccrc@{}}\\toprule",
-             " & \\multicolumn{5}{c}{coverage of nominal $95\\%$ intervals, $\\gamma=$} & spread over & $\\sqrt{\\neffP}\\times$\\\\",
-             "$\\neffP$ & $1$ & $0.5$ & $0.2$ & $0.05$ & $\\to0$ & $\\gamma\\in[0,1]$ & Kolmogorov\\\\\\midrule",
-             paste0(rows, "\\\\"), "\\bottomrule\\end{tabular}"), file.path(gen_dir, "tab_collapse.tex"))
+NPC <- if (BO_QUICK) c(1, 4, 16) else c(0.5, 0.75, 1, 1.5, 2, 3, 4, 6, 8, 12, 16, 24, 32, 48, 64)   # curves of the figure
+GC <- c(1, 0.5, 0.2, 0.05, 0)
+curves <- do.call(rbind, lapply(NPC, function(nP) do.call(rbind, lapply(GC, function(g) {
+  r <- limit_model(nP, g); data.frame(n_ovP = nP, gamma = g, coverage = r[["cov"]], ks_scaled = sqrt(nP) * r[["D"]])
+}))))
+save_table(curves, "collapse_curves")
 for (nP in c(1, 2, 4, 8, 16, 32)) {
   r <- lim[[as.character(nP)]]
   res_put(sprintf("col.lim.spread%d", nP), if (is.null(r)) NA else fx(max(r[, "cov"]) - min(r[, "cov"]), 3))
@@ -127,12 +124,23 @@ occupation <- function(kappa, n) {                    # fraction of [0, 1] spent
 Rm <- n_reps(REPS$collapse_ms, key = "collapse_ms")
 set.seed(cell_seed("collapse_ms"))
 nP <- 16; tau <- 3; mu <- 2 * tau * nP; sg <- sqrt(2 * tau / mu)
-for (i in seq_along(KAPPA <- c(0.25, 1, 4, 16))) {
-  kappa <- KAPPA[i]; dl <- sqrt((tau - 1) * kappa / mu); U <- 2 * occupation(kappa, Rm) - 1
+KAPPA <- if (BO_QUICK) c(0.25, 1, 4, 16) else c(0.25, 0.5, 1, 2, 4, 8, 16, 32)
+ms <- do.call(rbind, lapply(KAPPA, function(kappa) {
+  dl <- sqrt((tau - 1) * kappa / mu); U <- 2 * occupation(kappa, Rm) - 1
   a <- stats::rpois(Rm, mu * (1 + dl * U)); b <- stats::rpois(Rm, mu)
   D <- ifelse(a > 0 & b > 0, log(pmax(b, 1) / pmax(a, 1)), ifelse(b == 0, -Inf, Inf)) / sg
   x <- sort(D); Fe <- seq_len(Rm) / Rm
-  ks <- max(abs(Fe - stats::pnorm(x)), abs(Fe - 1 / Rm - stats::pnorm(x)))
-  res_put(sprintf("col.ms.cov%d", i), fx(mean(abs(D) <= z975), 3)); res_put(sprintf("col.ms.ks%d", i), fx(sqrt(nP) * ks, 2))
+  data.frame(kappa = kappa, coverage = mean(abs(D) <= z975),
+             ks_scaled = sqrt(nP) * max(abs(Fe - stats::pnorm(x)), abs(Fe - 1 / Rm - stats::pnorm(x))))
+}))
+save_table(ms, "collapse_multiscale")
+res_put("col.ms.R", fint(Rm))
+for (i in seq_along(kq <- c(0.25, 1, 4, 16))) {
+  j <- match(kq[i], ms$kappa)
+  res_put(sprintf("col.ms.cov%d", i), fx(ms$coverage[j], 3)); res_put(sprintf("col.ms.ks%d", i), fx(ms$ks_scaled[j], 2))
 }
+if (have_ggplot() && requireNamespace("patchwork", quietly = TRUE)) {
+  st <- system2(file.path(R.home("bin"), "Rscript"), shQuote(file.path(BO_ROOT, "plot_collapse.R")))
+  if (!identical(as.integer(st), 0L)) stop("plot_collapse.R failed (exit status ", st, ")")
+} else msg("ggplot2 or patchwork missing: fig_collapse not drawn")
 res_write("supplement/S23_collapse.R")

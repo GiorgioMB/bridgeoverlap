@@ -1,7 +1,7 @@
 #!/usr/bin/env Rscript
 # Supplement Table RERUN: what to do after an overlap flag. At the threshold cells of
 # 01_universality.R (n_ov ~ 9), each replication starts with S0 posterior and S0 proposal
-# draws and follows one of two policies until the continuous rule passes (at most K steps):
+# draws and follows one of two policies until the overlap check passes (at most K steps):
 #   fresh   a new independent run with both samples multiplied by 1.5 times the factor
 #           printed by Algorithm 1 (draws_factor = threshold / n_ov-hat);
 #   extend  the same factor, but the new draws are added to the flagged run (optional

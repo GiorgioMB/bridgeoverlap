@@ -37,7 +37,9 @@ the counts actually used are listed in Table S-replications. The Stan benchmark 
 | Figure S-conditional | `fig_conditional` | `supplement/S98_operating_characteristics.R`, `plot_conditional.R` |
 | Table S-E8, Figure S-mcmc (top) | `tab_E8`, `fig_mcmc` | `supplement/S09_E8_two_state_chain.R`, `plot_mcmc.R` |
 | Table S-E9, Figure S-mcmc (bottom) | `tab_E9_top`, `tab_E9_bottom` | `02_markov_chains.R`, `plot_mcmc.R` |
-| Table S-collapse | `tab_collapse` | `supplement/S23_collapse.R` |
+| Figure S-collapse | `fig_collapse` | `supplement/S23_collapse.R`, `plot_collapse.R` |
+| Table S-khat | `tab_khat` | `supplement/S24_pareto_khat.R` |
+| Table S-mbar | `tab_mbar` | `supplement/S26_multiple_bridges.R` |
 | Table S-LRV | `tab_LRV` | `supplement/S10_LRV_estimators.R` |
 | Table S-prop | `tab_prop` | `03_proposal_fitting.R` |
 | Table S-E5 | `tab_E5` | `04_sampler_failure.R` |
@@ -52,4 +54,5 @@ Numbers quoted in the text come from the same scripts and from:
 joint false-alarm rate), `S11_E4_proposal_fitting.R` and `S12_E4c_same_draw_bias.R`
 (proposal fitting), `S18_LRV_regeneration.R` (regeneration), `S19_rerun_vs_extend.R`
 (fresh rerun or extension after an overlap flag), `S22_exact_mcse_counterexample.R` (the
-counting example of Section 6.2) and `S23_collapse.R` (Section S5.1).
+counting example of Section 6.2), `S23_collapse.R` (Section S5.1) and `S25_mcmc_interval.R` (the
+finite-sample interval for Markov chain output).
