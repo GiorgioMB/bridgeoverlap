@@ -17,10 +17,10 @@ Family & $\rho$ & $\tau_W$ & $1$ & $2$ & $4$ & $8$ & $20$ & $80$ & oracle & igno
     header = r"---[& & & \multicolumn{6}{c}{median $\widehat n_P/v_P$ at increasing $\neffP$} & \multicolumn{3}{c}{median $\neffPhat$}\\
 \cmidrule(lr){4-9}\cmidrule(lr){10-12}
 Family & $\rho$ & $\tau_W$ & $1$ & $2$ & $4$ & $8$ & $20$ & $80$ & $1$ & $2$ & $4$\\]---"),
-  tab_LRV = list(spec = r"---[lrrrrccccrr]---",
-    header = r"---[Family & $\rho$ & $\tau_W$ & $\neffP$ & $S$ & oracle & Geyer & AR & \texttt{error\_measures} & med $\neffPhat$ (Geyer) & med $\neffPhat$ (AR)\\]---"),
-  tab_prop = list(spec = r"---[rlccccrr]---",
-    header = r"---[$d$ & proposal & sd of $\log\Zhat$ & bias/MCSE & RMSE & coverage & med $\neffhat$ & $t_\Tp$ rejections\\]---"),
+  tab_LRV = list(spec = r"---[lrrrrccccccrr]---",
+    header = r"---[Family & $\rho$ & $\tau_W$ & $\neffP$ & $S$ & oracle & Geyer & AR & lugsail & 4 runs & \texttt{error\_measures} & med $\neffPhat$ (Geyer) & med $\neffPhat$ (AR)\\]---"),
+  tab_prop = list(spec = r"---[rlccccr]---",
+    header = r"---[$d$ & proposal & sd of $\log\Zhat$ & bias/MCSE & RMSE & coverage & med $\neffhat$\\]---"),
   tab_E5 = list(spec = r"---[lrccccc]---",
-    header = r"---[Scenario & med $\neffhat$ & bias/MCSE & Var/MCSE$^2$ & coverage & mean $\Vjack$ & variance check (\%)\\]---"),
+    header = r"---[Scenario & med $\neffhat$ & bias/MCSE & Var/MCSE$^2$ & coverage & mean $\Vjack$ & variance check (\%)\\]---")
 )

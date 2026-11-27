@@ -29,7 +29,16 @@ runs <- do.call(rbind, lapply(seq_len(nrow(rows)), function(i) {
     d <- bridge_diagnostics(ap, aq, iid = FALSE, jackknife = FALSE, keep_responsibilities = TRUE)
     tau_ar <- iat(d$responsibilities$posterior, S, "concat_ar")
     n_P_ar <- S * d$V_prop + S * d$V_post * tau_ar
-    data.frame(Delta = d$logml - logZ, mcse = d$mcse, mcse_ar = sqrt(n_P_ar) / d$NH0,
+    pp <- d$responsibilities$posterior; v <- stats::var(pp)
+    bm <- function(b) { m <- floor(S / b); if (m < 2) return(NA_real_); b * stats::var(colMeans(matrix(pp[seq_len(m * b)], b))) }
+    b <- max(3L, floor(sqrt(S))); lug <- 2 * bm(b) - bm(max(1L, b %/% 3))          # lugsail batch means, r = 3, c = 1/2
+    tau_lug <- if (is.finite(lug) && v > 0) max(lug / v, 1 / S) else NA_real_
+    n_P_lug <- S * d$V_prop + S * d$V_post * tau_lug
+    rep4 <- vapply(1:4, function(k) {                                               # four independent runs of size S/4
+      a1 <- logZ + fam$lr(ar1_u(max(2L, S %/% 4), fam$d, rw$rho, 1L)[, 1]); a2 <- logZ + fam$lr(fam$rprop(max(2L, S %/% 4)))
+      bridge_logml(a1, a2)$logml }, 0)
+    data.frame(Delta = d$logml - logZ, mcse = d$mcse, mcse_ar = sqrt(n_P_ar) / d$NH0, mcse_lug = sqrt(n_P_lug) / d$NH0,
+               rep_err = mean(rep4) - logZ, rep_se = stats::sd(rep4) / 2,
                cv_em = sqrt(error_measures_re2(ap, aq, d$logml)), n_ovP_geyer = d$n_ovP, n_ovP_ar = d$n_ov^2 / n_P_ar)
   })
   res$fam <- rw$fam; res$rho <- rw$rho; res$n_ovP <- rw$n_ovP; res$S <- rw$S
@@ -40,6 +49,7 @@ cv <- function(e, s) mean(is.finite(e) & abs(e) <= z975 * s)
 tab <- do.call(rbind, lapply(split(runs, interaction(runs$fam, runs$rho, runs$S, drop = TRUE)), function(x) {
   data.frame(family = x$fam[1], rho = x$rho[1], tau_W = x$tau_W[1], n_ovP = x$n_ovP[1], S = x$S[1], R = nrow(x),
              oracle = cv(x$Delta, x$sigma_NP), geyer = cv(x$Delta, x$mcse), ar = cv(x$Delta, x$mcse_ar),
+             lugsail = cv(x$Delta, x$mcse_lug), replicate = cv(x$rep_err, x$rep_se),
              error_measures = cv(x$Delta, x$cv_em), med_n_ovP_geyer = stats::median(x$n_ovP_geyer),
              med_n_ovP_ar = stats::median(x$n_ovP_ar))
 }))
@@ -68,11 +78,11 @@ print(tab, digits = 3); print(bottom, digits = 3); print(extra, digits = 3)
 flab <- c(F2 = "F2, $\\mu_g=2$", F1 = "F1")
 bin_row <- function(est) {
   x <- bottom[bottom$estimator == est, ]
-  sprintf("\\multicolumn{2}{l}{%s, binned} & \\multicolumn{9}{l}{%s}\\\\", est,
+  sprintf("\\multicolumn{2}{l}{%s, binned} & \\multicolumn{11}{l}{%s}\\\\", est,
           paste(sprintf("%s (%d)", fx(x$coverage, 3), x$runs), collapse = ",\\quad "))
 }
 emit_table("tab_LRV", cbind(flab[tab$family], tab$rho, fx(tab$tau_W, 2), tab$n_ovP, tab$S, fx(tab$oracle, 3), fx(tab$geyer, 3),
-                            fx(tab$ar, 3), fx(tab$error_measures, 3), fx(tab$med_n_ovP_geyer, 1), fx(tab$med_n_ovP_ar, 1)),
+                            fx(tab$ar, 3), fx(tab$lugsail, 3), fx(tab$replicate, 3), fx(tab$error_measures, 3), fx(tab$med_n_ovP_geyer, 1), fx(tab$med_n_ovP_ar, 1)),
            extra = c("\\midrule", bin_row("Geyer"), bin_row("AR")))
 pool <- function(lo, hi) {
   vapply(c("Geyer", "AR"), function(est) {
@@ -84,6 +94,7 @@ pool <- function(lo, hi) {
 res_put("lrv.R", fint(R)); res_put("lrv.lt10", frange(pool(0, 10), 2)); res_put("lrv.10to20", frange(pool(10, 20), 2))
 res_put("lrv.ge20", frange(c(bottom$coverage[bottom$bin %in% c("[20,30)", "[30,60)", "[60,Inf)")]), 2))
 res_put("lrv.em", frange(tab$error_measures, 2))
+res_put("lrv.lug", frange(tab$lugsail, 2)); res_put("lrv.rep", frange(tab$replicate, 2)); res_put("lrv.geyer", frange(tab$geyer, 2))
 res_put("lrv.iid.em", fx(extra$coverage_error_measures, 3)); res_put("lrv.iid.delta", fx(extra$coverage_delta, 3))
 res_put("lrv.iid.ratio", fx(extra$median_ratio_em_over_mcse, 2)); res_put("lrv.iid.varf2", fx(extra$median_var_f2, 2))
 res_write("supplement/S10_LRV_estimators.R")

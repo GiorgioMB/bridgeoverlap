@@ -37,7 +37,9 @@ the counts actually used are listed in Table S-replications. The Stan benchmark 
 | Figure S-conditional | `fig_conditional` | `supplement/S98_operating_characteristics.R`, `plot_conditional.R` |
 | Table S-E8, Figure S-mcmc (top) | `tab_E8`, `fig_mcmc` | `supplement/S09_E8_two_state_chain.R`, `plot_mcmc.R` |
 | Table S-E9, Figure S-mcmc (bottom) | `tab_E9_top`, `tab_E9_bottom` | `02_markov_chains.R`, `plot_mcmc.R` |
+| Figure S-space | `fig_problem_space` | `supplement/S20_problem_space.R`, `plot_problem_space.R` |
 | Figure S-collapse | `fig_collapse` | `supplement/S23_collapse.R`, `plot_collapse.R` |
+| Table S-ss | `tab_ss` | `supplement/S27_stepping_stone.R` |
 | Table S-khat | `tab_khat` | `supplement/S24_pareto_khat.R` |
 | Table S-mbar | `tab_mbar` | `supplement/S26_multiple_bridges.R` |
 | Table S-LRV | `tab_LRV` | `supplement/S10_LRV_estimators.R` |

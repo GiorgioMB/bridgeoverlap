@@ -8,6 +8,10 @@
 # cell_seed(cell) + r (see R/common.R), so a rerun reproduces the same numbers.
 REPS <- list(
   collapse_ms     = 1000000L, # S23: multi-scale example of Remark S-multiscale, per value of kappa
+  ps_laws         = 2000L,    # S20: laws on [0,1] searched for the calibration of the overlap check
+  ps              = 4000L,    # S20: runs per law in the search
+  ps_refine       = 40000L,   # S20: fresh runs per worst law
+  ss              = 1000L,    # S27: stepping-stone comparison, per configuration and number of draws
   khat            = 1000L,    # S24: Pareto k-hat against the overlap check, per configuration and sample size
   mcfs            = 500L,     # S25: finite-sample interval for Markov chain output, per chain and sample size
   mbar            = 2000L,    # S26: multiple bridge sampling, per number of draws per distribution
